@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Namespace
+metadata: {name: bench-oom}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: importer, namespace: bench-oom, labels: {app: importer}}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: importer}}
+  template:
+    metadata: {labels: {app: importer}}
+    spec:
+      terminationGracePeriodSeconds: 1
+      containers:
+        - name: importer
+          image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+          # Reads an endless stream into memory, like a job that loads a whole file.
+          command: ["sh", "-c", "echo 'loading accounts into memory'; tail /dev/zero"]
+          resources: {requests: {cpu: 10m, memory: 16Mi}, limits: {memory: 32Mi}}

@@ -1,0 +1,8 @@
+{
+  "symptom": "stock-sync restarts all the time and never stays up. Each run prints one line and dies.",
+  "namespace": "h2-batch",
+  "ready_cmd": "get pods -n h2-batch --no-headers",
+  "ready_when": "stock-sync\\S+\\s+0/1\\s+(CrashLoopBackOff|Error)",
+  "root_cause": "The script /scripts/sync.sh comes from the sync-scripts ConfigMap volume with the default file mode 0644, so it is not executable: Permission denied, exit 126.",
+  "must": [["permission denied|not executable|\\b126\\b|executable|exec bit"],["configmap|sync-scripts|defaultmode|file mode|0644|mode|volume"]]
+}

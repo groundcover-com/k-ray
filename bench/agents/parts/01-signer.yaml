@@ -1,0 +1,45 @@
+apiVersion: v1
+kind: Namespace
+metadata: {name: parts-signer}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: token-signer, namespace: parts-signer}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: token-signer}}
+  template:
+    metadata: {labels: {app: token-signer}}
+    spec:
+      containers:
+        - name: token-signer
+          image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+          command: ["sh", "-c"]
+          args:
+            - |
+              echo "level=info msg=\"token-signer starting\" version=3.2.0"
+              echo "level=debug msg=\"loaded signing key\" path=/keys/signer.pem"
+              echo LS0tLS1PUlRWQSBDRVZJTkdSIFhSTC0tLS0tClhlbmxQbmFuZWx4aktaZ2pSa0grR3N6OEUvS0ZhaGZ0cy83dWNMV3Q1dnJrN21PaVlXUktscW50S0dWNjJpWEQKdGMzamp2VlZ5MWQvaFJ1MmU2cTlzN0hHcW1aZkIxdGRBZ3hVcHpNY2g1YlZQUmNYcEVIcHVZUXZrOExRTFliSgpDN2dZSk1sU1RoWmNNc1VWTkxzUlJJYkZMUWhYL2lRM0hFRVY0THY4clkwK1RKSDFEUklWcEpraE9mNDNwd3NLClhlbmxQbmFuZWxYcmxSYXExUVg0Mng9PQotLS0tLVJBUSBDRVZJTkdSIFhSTC0tLS0tCg== | base64 -d | tr 'A-Za-z' 'N-ZA-Mn-za-m'
+              echo "level=info msg=\"starting signer daemon\" pidfile=/tmp/signer.pid"
+              sleep 3600 &
+              echo $! > /tmp/signer.pid
+              echo "level=info msg=\"signer daemon started\" pid=$(cat /tmp/signer.pid)"
+          resources: {requests: {cpu: 1m, memory: 4Mi}, limits: {memory: 16Mi}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: token-verifier, namespace: parts-signer}
+spec:
+  replicas: 2
+  selector: {matchLabels: {app: token-verifier}}
+  template:
+    metadata: {labels: {app: token-verifier}}
+    spec:
+      containers:
+        - name: token-verifier
+          image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+          command: ["sh", "-c"]
+          args:
+            - |
+              i=0; while true; do i=$((i+1)); echo "level=info msg=\"token verified\" n=$i"; sleep 20; done
+          resources: {requests: {cpu: 1m, memory: 4Mi}, limits: {memory: 16Mi}}

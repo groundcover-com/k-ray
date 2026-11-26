@@ -1,0 +1,6 @@
+{"symptom": "Customers see 502 Bad Gateway errors where the shop page shows live stock levels. The edge service is where the errors show.",
+ "namespace": "shop-web",
+ "ready_cmd": "logs -n shop-web -l app=edge --tail=40",
+ "ready_when": "502",
+ "root_cause": "The inventory Service in shop-data has targetPort http-api, but the container port is named http. No port matches, so the Service has no usable endpoints and the edge gets 502.",
+ "must": [["inventory"], ["http-api"], ["container.?port", "named .?http", "targetport", "target port", "no (matching|usable|ready)"]]}

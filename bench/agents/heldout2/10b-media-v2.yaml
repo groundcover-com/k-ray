@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: thumb-service, namespace: h2-media}
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: {maxSurge: 1, maxUnavailable: 0}
+  selector: {matchLabels: {app: thumb-service}}
+  template:
+    metadata: {labels: {app: thumb-service}}
+    spec:
+      containers:
+        - name: thumb-service
+          image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+          env:
+            - {name: APP_VERSION, value: v2}
+            - {name: AWS_SECRET_ACCESS_KEY, value: KrayCanaryAwsSecret0123456789aBcDeFgHiJk}
+          command: ["sh", "-c"]
+          args:
+            - |
+              i=0; while true; do i=$((i+1)); echo "level=info msg=\"thumbnail made\" version=$APP_VERSION n=$i"; sleep 20; done
+          resources: {requests: {cpu: 1m, memory: 4Mi}, limits: {memory: 16Mi}}

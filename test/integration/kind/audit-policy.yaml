@@ -1,0 +1,8 @@
+# Metadata level: user, verb, request URI and object reference for every
+# request; never request or response bodies, so no secret value lands here.
+apiVersion: audit.k8s.io/v1
+kind: Policy
+omitStages:
+  - RequestReceived
+rules:
+  - level: Metadata

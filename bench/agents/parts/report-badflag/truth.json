@@ -1,0 +1,8 @@
+{
+  "symptom": "report-builder restarts right after it starts and never serves.",
+  "namespace": "parts-report",
+  "ready_cmd": "get pods -n parts-report --no-headers",
+  "ready_when": "report-builder\\S+\\s+0/1\\s+(CrashLoopBackOff|Error)",
+  "root_cause": "The container args pass --worker-count=4, a flag the program does not know (it takes --workers=N), so it prints 'unknown flag: --worker-count' and exits with code 2.",
+  "must": [["worker-count"], ["unknown|not (a )?(known|defined|valid|recogni[sz]ed)|unrecogni[sz]ed|invalid|unsupported|--workers"]]
+}

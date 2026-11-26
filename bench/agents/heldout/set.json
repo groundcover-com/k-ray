@@ -1,0 +1,8 @@
+{
+  "namespaces": ["held-netpol","held-pvc","held-quota","held-init","held-hpa","held-cron","held-svcport","held-job"],
+  "steps": [
+    {"apply": ["netpol.yaml","pvc.yaml","quota.yaml","init.yaml","hpa.yaml","cron.yaml","svcport.yaml","job.yaml"],
+     "wait_rollout": ["deployment/report-worker -n held-quota", "deployment/ledger-api -n held-netpol", "deployment/inventory -n held-svcport", "deployment/feature-flags -n held-init"]},
+    {"apply": ["quota-scale.yaml"]}
+  ]
+}

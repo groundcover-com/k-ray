@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: catalog-web, namespace: h2-catalog}
+spec:
+  paused: true
+  replicas: 2
+  selector: {matchLabels: {app: catalog-web}}
+  template:
+    metadata: {labels: {app: catalog-web}}
+    spec:
+      containers:
+        - name: catalog-web
+          image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+          env:
+            - {name: APP_VERSION, value: v1.5.0}
+          command: ["sh", "-c"]
+          args:
+            - |
+              i=0; while true; do i=$((i+1)); echo "level=info msg=\"page served\" version=$APP_VERSION n=$i"; sleep 20; done
+          resources: {requests: {cpu: 1m, memory: 4Mi}, limits: {memory: 16Mi}}

@@ -1,0 +1,12 @@
+{
+  "namespace": "held-job",
+  "symptom": "The nightly ledger-reconcile job did not finish and finance has no reconciliation report this morning.",
+  "ready_cmd": "get job -n held-job",
+  "ready_when": "ledger-reconcile\\s+Failed",
+  "root_cause": "The Job ledger-reconcile failed (backoff limit reached) because its pods exit 1 with 'checksum mismatch in batch 4471' on the input file ledger-2026-11-15.csv.",
+  "must": [
+    ["ledger-reconcile"],
+    ["checksum"],
+    ["4471|9f2c1e|77ab04|mismatch"]
+  ]
+}

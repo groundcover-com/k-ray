@@ -1,0 +1,8 @@
+{
+  "symptom": "We shipped catalog-web v1.5.0 an hour ago, but the running pods still report v1.4.2. Why is the new version not live?",
+  "namespace": "h2-catalog",
+  "ready_cmd": "get deploy catalog-web -n h2-catalog -o jsonpath={.spec.paused}",
+  "ready_when": "true",
+  "root_cause": "The catalog-web Deployment has spec.paused true, so the new template (v1.5.0) never rolls out and the old ReplicaSet keeps serving.",
+  "must": [["paused|pause"],["rollout|roll out|rolled|resume|replicaset|new pods"]]
+}

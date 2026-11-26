@@ -1,0 +1,4 @@
+{"symptom": "The notifier deployment in namespace bench-config does not start.",
+ "ready_when": "CreateContainerConfigError",
+ "root_cause": "The pod refers to the ConfigMap notifier-settings, which does not exist. The namespace has notifier-config instead.",
+ "must": [["notifier-settings"], ["not found", "does not exist", "doesn't exist", "missing", "no such", "non-?existent"]]}

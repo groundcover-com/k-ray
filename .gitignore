@@ -1,0 +1,18 @@
+/bin/
+/dist/
+/reports/
+/artifacts/
+*.out
+*.test
+.env
+
+# Local kind harness output (API server audit log, kubeconfigs).
+/test/integration/out/
+
+# Agent session-continuation artifacts.
+.sisyphus/
+/test/e2e/out/
+
+# Agent benchmark transcripts and raw results (may hold cluster data).
+/bench/agents/results/**/*.jsonl
+/bench/agents/results/**/results.json

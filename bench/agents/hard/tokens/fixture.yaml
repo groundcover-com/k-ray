@@ -1,0 +1,552 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata: {name: shop-web}
+---
+apiVersion: v1
+kind: Namespace
+metadata: {name: shop-orders}
+---
+apiVersion: v1
+kind: Namespace
+metadata: {name: shop-data}
+---
+apiVersion: v1
+kind: Namespace
+metadata: {name: shop-batch}
+---
+# storefront, revision 1. release-2.yaml is the revision that never becomes ready.
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: storefront, namespace: shop-web, labels: {app: storefront}}
+spec:
+  replicas: 3
+  strategy: {type: RollingUpdate, rollingUpdate: {maxSurge: 1, maxUnavailable: 0}}
+  selector: {matchLabels: {app: storefront}}
+  template:
+    metadata:
+      labels: {app: storefront}
+      annotations: {release: "2026.11.1"}
+    spec:
+      terminationGracePeriodSeconds: 1
+      containers:
+        - name: storefront
+          image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+          command: ["sh", "-c"]
+          args:
+            - |
+              mkdir -p /www; echo ok > /www/healthz; echo '<h1>storefront</h1>' > /www/index.html
+              awk -v n=2000 'BEGIN{srand(5); split("orders items cart users search stock prices",p," "); for(i=0;i<n;i++){ printf "level=INFO svc=storefront msg=\"request handled\" req=%08x path=/%s status=200 duration_ms=%d\n", int(rand()*2147483647), p[int(rand()*7)+1], int(rand()*90)+1 }}'
+              exec httpd -f -p 8080 -h /www
+          env: [{name: BANNER_TEXT, value: "Autumn sale"}]
+          ports: [{name: http, containerPort: 8080}]
+          readinessProbe: {httpGet: {path: /healthz, port: http}, periodSeconds: 5}
+          resources: {requests: {cpu: 2m, memory: 6Mi}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: storefront, namespace: shop-web, labels: {app: storefront}}
+spec:
+  selector: {app: storefront}
+  ports: [{name: http, port: 80, targetPort: 8080}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: edge, namespace: shop-web, labels: {app: edge}}
+spec:
+  replicas: 3
+  selector: {matchLabels: {app: edge}}
+  template:
+    metadata: {labels: {app: edge}}
+    spec:
+      terminationGracePeriodSeconds: 1
+      containers:
+        - name: edge
+          image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+          command: ["sh", "-c"]
+          args:
+            - |
+              awk -v n=1500 'BEGIN{srand(9); split("products cart session banners search",p," "); for(i=0;i<n;i++){ printf "level=INFO svc=edge msg=\"proxied\" req=%08x path=/api/%s status=200 duration_ms=%d\n", int(rand()*2147483647), p[int(rand()*5)+1], int(rand()*60)+1 }}'
+              while true; do
+                if wget -q -T 2 -O /dev/null http://catalog.shop-data.svc.cluster.local/healthz 2>/dev/null; then
+                  echo "level=INFO svc=edge msg=proxied method=GET path=/api/products upstream=catalog.shop-data.svc.cluster.local:80 status=200"
+                else
+                  echo "level=ERROR svc=edge msg=\"upstream failed\" method=GET path=/api/products upstream=catalog.shop-data.svc.cluster.local:80 status=502"
+                fi
+                if wget -T 2 -O /dev/null http://inventory.shop-data.svc.cluster.local/healthz >/dev/null 2>&1; then
+                  echo "level=INFO svc=edge msg=proxied method=GET path=/api/stock upstream=inventory.shop-data.svc.cluster.local:80 status=200"
+                else
+                  detail=$(wget -T 2 -O /dev/null http://inventory.shop-data.svc.cluster.local/healthz 2>&1 | tail -1)
+                  echo "level=ERROR svc=edge msg=\"upstream failed\" method=GET path=/api/stock upstream=inventory.shop-data.svc.cluster.local:80 status=502 error=\"Bad Gateway\" detail=\"$detail\""
+                fi
+                sleep 10
+              done
+          resources: {requests: {cpu: 1m, memory: 4Mi}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: edge, namespace: shop-web, labels: {app: edge}}
+spec:
+  selector: {app: edge}
+  ports: [{name: http, port: 80, targetPort: 8080}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: search, namespace: shop-web, labels: {app: search}}
+spec:
+  replicas: 5
+  selector: {matchLabels: {app: search}}
+  template:
+    metadata: {labels: {app: search}}
+    spec:
+      terminationGracePeriodSeconds: 1
+      containers:
+        - name: search
+          image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+          command: ["sh", "-c"]
+          args:
+            - |
+              sleep $(( $(echo $HOSTNAME | cksum | cut -c1-3) % 90 ))
+              awk -v svc=search -v n=4000 'BEGIN{srand(length(svc)*131); split("orders items cart users search stock prices",p," "); for(i=0;i<n;i++){ printf "level=INFO svc=%s msg=\"request handled\" req=%08x path=/api/%s status=%d duration_ms=%d\n", svc, int(rand()*2147483647), p[int(rand()*7)+1], (rand()<0.97?200:304), int(rand()*220)+2 }}'
+              while true; do echo "level=INFO svc=search msg=heartbeat"; sleep 30; done
+          resources: {requests: {cpu: 1m, memory: 4Mi}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: search, namespace: shop-web, labels: {app: search}}
+spec:
+  selector: {app: search}
+  ports: [{name: http, port: 80, targetPort: 8080}]
+---
+apiVersion: v1
+kind: Service
+metadata: {name: checkout, namespace: shop-orders, labels: {app: checkout}}
+spec:
+  clusterIP: None
+  selector: {app: checkout}
+  ports: [{name: http, port: 80, targetPort: 8080}]
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata: {name: checkout, namespace: shop-orders, labels: {app: checkout}}
+spec:
+  replicas: 20
+  serviceName: checkout
+  podManagementPolicy: Parallel
+  selector: {matchLabels: {app: checkout}}
+  template:
+    metadata: {labels: {app: checkout}}
+    spec:
+      terminationGracePeriodSeconds: 1
+      containers:
+        - name: checkout
+          image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+          command: ["sh", "-c"]
+          args:
+            - |
+              ord=${HOSTNAME##*-}
+              sleep $((ord * 4))
+              bad=0
+              case "$ord" in 3|10|17) bad=1;; esac
+              awk -v bad=$bad -v ord=$ord 'function trace(   k) {
+                printf "ERROR [http-nio-8080-exec-%d] c.shop.checkout.PaymentService - payment authorization failed order=ORD-%06d\n", int(rand()*40)+1, int(rand()*999999)
+                print "com.shop.checkout.PaymentException: authorization call to the payment gateway failed"
+                for (k=1;k<=n1;k++) print "\tat " f1[k]
+                print "Caused by: java.net.SocketTimeoutException: Read timed out"
+                for (k=1;k<=n2;k++) print "\tat " f2[k]
+                print "Caused by: java.net.ConnectException: Connection to payment-gateway.paynet.example:443 timed out after 5000 ms (pool=payments, retries=0)"
+                for (k=1;k<=n3;k++) print "\tat " f3[k]
+                print "\t... 27 more"
+              }
+              BEGIN {
+                srand(ord*7+3)
+                n1=split("com.shop.checkout.PaymentService.authorize(PaymentService.java:142);com.shop.checkout.CheckoutController.pay(CheckoutController.java:88);jdk.internal.reflect.DirectMethodHandleAccessor.invoke(DirectMethodHandleAccessor.java:103);java.base/java.lang.reflect.Method.invoke(Method.java:580);org.springframework.web.method.support.InvocableHandlerMethod.doInvoke(InvocableHandlerMethod.java:255);org.springframework.web.method.support.InvocableHandlerMethod.invokeForRequest(InvocableHandlerMethod.java:188);org.springframework.web.servlet.mvc.method.annotation.ServletInvocableHandlerMethod.invokeAndHandle(ServletInvocableHandlerMethod.java:118);org.springframework.web.servlet.DispatcherServlet.doDispatch(DispatcherServlet.java:1089);org.springframework.web.servlet.DispatcherServlet.doService(DispatcherServlet.java:979);org.springframework.web.servlet.FrameworkServlet.processRequest(FrameworkServlet.java:1014);org.apache.catalina.core.StandardWrapperValve.invoke(StandardWrapperValve.java:167);org.apache.coyote.http11.Http11Processor.service(Http11Processor.java:400)", f1, ";")
+                n2=split("java.base/sun.nio.ch.NioSocketImpl.timedRead(NioSocketImpl.java:288);java.base/sun.nio.ch.NioSocketImpl.implRead(NioSocketImpl.java:314);java.base/java.net.Socket$SocketInputStream.read(Socket.java:1099);com.shop.http.PooledClient.execute(PooledClient.java:211);com.shop.http.PooledClient.post(PooledClient.java:97);com.shop.checkout.gateway.PaymentGatewayClient.authorize(PaymentGatewayClient.java:61);com.shop.checkout.PaymentService.authorize(PaymentService.java:131)", f2, ";")
+                n3=split("java.base/sun.nio.ch.NioSocketImpl.connect(NioSocketImpl.java:546);java.base/java.net.Socket.connect(Socket.java:752);com.shop.http.PooledClient.openConnection(PooledClient.java:174);com.shop.http.PooledClient.acquire(PooledClient.java:150);com.shop.http.PooledClient.execute(PooledClient.java:203);com.shop.http.PooledClient.post(PooledClient.java:97);com.shop.checkout.gateway.PaymentGatewayClient.authorize(PaymentGatewayClient.java:61);com.shop.checkout.PaymentService.authorize(PaymentService.java:131)", f3, ";")
+                split("orders items cart users coupons stock prices",p," ")
+                t=0
+                for (i=0;i<10000;i++) {
+                  printf "level=INFO svc=checkout pod=checkout-%d msg=\"request handled\" req=%08x path=/api/%s status=200 duration_ms=%d\n", ord, int(rand()*2147483647), p[int(rand()*7)+1], int(rand()*240)+2
+                  if (bad && i%19==5) { t++; trace() }
+                }
+              }'
+              echo "level=INFO svc=checkout msg=\"startup complete, serving traffic\""
+              exec sleep 3600000
+          resources: {requests: {cpu: 1m, memory: 4Mi}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: orders-api, namespace: shop-orders, labels: {app: orders-api}}
+spec:
+  replicas: 6
+  selector: {matchLabels: {app: orders-api}}
+  template:
+    metadata: {labels: {app: orders-api}}
+    spec:
+      terminationGracePeriodSeconds: 1
+      containers:
+        - name: orders-api
+          image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+          command: ["sh", "-c"]
+          args:
+            - |
+              sleep $(( $(echo $HOSTNAME | cksum | cut -c1-3) % 90 ))
+              awk -v svc=orders-api -v n=6000 'BEGIN{srand(length(svc)*131); split("orders items cart users search stock prices",p," "); for(i=0;i<n;i++){ printf "level=INFO svc=%s msg=\"request handled\" req=%08x path=/api/%s status=%d duration_ms=%d\n", svc, int(rand()*2147483647), p[int(rand()*7)+1], (rand()<0.97?200:304), int(rand()*220)+2 }}'
+              while true; do echo "level=INFO svc=orders-api msg=heartbeat"; sleep 30; done
+          resources: {requests: {cpu: 1m, memory: 4Mi}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: orders-api, namespace: shop-orders, labels: {app: orders-api}}
+spec:
+  selector: {app: orders-api}
+  ports: [{name: http, port: 80, targetPort: 8080}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: cart, namespace: shop-orders, labels: {app: cart}}
+spec:
+  replicas: 3
+  selector: {matchLabels: {app: cart}}
+  template:
+    metadata: {labels: {app: cart}}
+    spec:
+      terminationGracePeriodSeconds: 1
+      containers:
+        - name: cart
+          image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+          command: ["sh", "-c"]
+          args:
+            - |
+              if [ ! -f /state/seen ]; then touch /state/seen; echo "level=ERROR svc=cart msg=\"broker not reachable on first start, exiting\""; exit 1; fi
+              sleep $(( $(echo $HOSTNAME | cksum | cut -c1-3) % 90 ))
+              awk -v svc=cart -v n=2000 'BEGIN{srand(length(svc)*17); split("orders items cart users search stock prices",p," "); for(i=0;i<n;i++){ printf "level=INFO svc=%s msg=\"request handled\" req=%08x path=/api/%s status=200 duration_ms=%d\n", svc, int(rand()*2147483647), p[int(rand()*7)+1], int(rand()*220)+2 }}'
+              while true; do echo "level=INFO svc=cart msg=heartbeat"; sleep 30; done
+          volumeMounts: [{name: state, mountPath: /state}]
+          resources: {requests: {cpu: 1m, memory: 4Mi}}
+      volumes: [{name: state, emptyDir: {}}]
+---
+apiVersion: v1
+kind: Service
+metadata: {name: cart, namespace: shop-orders, labels: {app: cart}}
+spec:
+  selector: {app: cart}
+  ports: [{name: http, port: 80, targetPort: 8080}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: notifications, namespace: shop-orders, labels: {app: notifications}}
+spec:
+  replicas: 3
+  selector: {matchLabels: {app: notifications}}
+  template:
+    metadata: {labels: {app: notifications}}
+    spec:
+      terminationGracePeriodSeconds: 1
+      containers:
+        - name: notifications
+          image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+          command: ["sh", "-c"]
+          args:
+            - |
+              if [ ! -f /state/seen ]; then touch /state/seen; echo "level=ERROR svc=notifications msg=\"broker not reachable on first start, exiting\""; exit 1; fi
+              sleep $(( $(echo $HOSTNAME | cksum | cut -c1-3) % 90 ))
+              awk -v svc=notifications -v n=1500 'BEGIN{srand(length(svc)*17); split("orders items cart users search stock prices",p," "); for(i=0;i<n;i++){ printf "level=INFO svc=%s msg=\"request handled\" req=%08x path=/api/%s status=200 duration_ms=%d\n", svc, int(rand()*2147483647), p[int(rand()*7)+1], int(rand()*220)+2 }}'
+              while true; do echo "level=INFO svc=notifications msg=heartbeat"; sleep 30; done
+          volumeMounts: [{name: state, mountPath: /state}]
+          resources: {requests: {cpu: 1m, memory: 4Mi}}
+      volumes: [{name: state, emptyDir: {}}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: pricing, namespace: shop-orders, labels: {app: pricing}}
+spec:
+  replicas: 3
+  selector: {matchLabels: {app: pricing}}
+  template:
+    metadata: {labels: {app: pricing}}
+    spec:
+      terminationGracePeriodSeconds: 1
+      containers:
+        - name: pricing
+          image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+          command: ["sh", "-c"]
+          args:
+            - |
+              sleep $(( $(echo $HOSTNAME | cksum | cut -c1-3) % 90 ))
+              awk -v svc=pricing -v n=3000 'BEGIN{srand(length(svc)*131); split("orders items cart users search stock prices",p," "); for(i=0;i<n;i++){ printf "level=INFO svc=%s msg=\"request handled\" req=%08x path=/api/%s status=%d duration_ms=%d\n", svc, int(rand()*2147483647), p[int(rand()*7)+1], (rand()<0.97?200:304), int(rand()*220)+2 }}'
+              while true; do echo "level=INFO svc=pricing msg=heartbeat"; sleep 30; done
+          resources: {requests: {cpu: 1m, memory: 4Mi}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: pricing, namespace: shop-orders, labels: {app: pricing}}
+spec:
+  selector: {app: pricing}
+  ports: [{name: http, port: 80, targetPort: 8080}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: catalog, namespace: shop-data, labels: {app: catalog}}
+spec:
+  replicas: 4
+  selector: {matchLabels: {app: catalog}}
+  template:
+    metadata: {labels: {app: catalog}}
+    spec:
+      terminationGracePeriodSeconds: 1
+      containers:
+        - name: catalog
+          image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+          command: ["sh", "-c"]
+          args:
+            - |
+              mkdir -p /www; echo ok > /www/healthz; echo '{"items":[]}' > /www/index.html
+              exec httpd -f -p 8080 -h /www
+          ports: [{name: http, containerPort: 8080}]
+          resources: {requests: {cpu: 1m, memory: 4Mi}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: catalog, namespace: shop-data, labels: {app: catalog}}
+spec:
+  selector: {app: catalog}
+  ports: [{name: http, port: 80, targetPort: 8080}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: inventory, namespace: shop-data, labels: {app: inventory}}
+spec:
+  replicas: 3
+  selector: {matchLabels: {app: inventory}}
+  template:
+    metadata: {labels: {app: inventory}}
+    spec:
+      terminationGracePeriodSeconds: 1
+      containers:
+        - name: inventory
+          image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+          command: ["sh", "-c"]
+          args:
+            - |
+              mkdir -p /www; echo ok > /www/healthz; echo '{"items":[]}' > /www/index.html
+              exec httpd -f -p 8080 -h /www
+          ports: [{name: http, containerPort: 8080}]
+          resources: {requests: {cpu: 1m, memory: 4Mi}}
+---
+# The port is called "http" in the container, but this Service asks for "http-api".
+apiVersion: v1
+kind: Service
+metadata: {name: inventory, namespace: shop-data, labels: {app: inventory}}
+spec:
+  selector: {app: inventory}
+  ports: [{name: http, port: 80, targetPort: http-api}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: cache, namespace: shop-data, labels: {app: cache}}
+spec:
+  replicas: 3
+  selector: {matchLabels: {app: cache}}
+  template:
+    metadata: {labels: {app: cache}}
+    spec:
+      terminationGracePeriodSeconds: 1
+      containers:
+        - name: cache
+          image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+          command: ["sh", "-c"]
+          args:
+            - |
+              sleep $(( $(echo $HOSTNAME | cksum | cut -c1-3) % 90 ))
+              awk -v svc=cache -v n=2000 'BEGIN{srand(length(svc)*131); split("orders items cart users search stock prices",p," "); for(i=0;i<n;i++){ printf "level=INFO svc=%s msg=\"request handled\" req=%08x path=/api/%s status=%d duration_ms=%d\n", svc, int(rand()*2147483647), p[int(rand()*7)+1], (rand()<0.97?200:304), int(rand()*220)+2 }}'
+              while true; do echo "level=INFO svc=cache msg=heartbeat"; sleep 30; done
+          resources: {requests: {cpu: 1m, memory: 4Mi}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: cache, namespace: shop-data, labels: {app: cache}}
+spec:
+  selector: {app: cache}
+  ports: [{name: http, port: 80, targetPort: 8080}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: worker, namespace: shop-batch, labels: {app: worker}}
+spec:
+  replicas: 4
+  selector: {matchLabels: {app: worker}}
+  template:
+    metadata: {labels: {app: worker}}
+    spec:
+      terminationGracePeriodSeconds: 1
+      containers:
+        - name: worker
+          image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+          command: ["sh", "-c"]
+          args:
+            - |
+              sleep $(( $(echo $HOSTNAME | cksum | cut -c1-3) % 90 ))
+              awk -v svc=worker -v n=3000 'BEGIN{srand(length(svc)*131); split("orders items cart users search stock prices",p," "); for(i=0;i<n;i++){ printf "level=INFO svc=%s msg=\"request handled\" req=%08x path=/api/%s status=%d duration_ms=%d\n", svc, int(rand()*2147483647), p[int(rand()*7)+1], (rand()<0.97?200:304), int(rand()*220)+2 }}'
+              while true; do echo "level=INFO svc=worker msg=heartbeat"; sleep 30; done
+          resources: {requests: {cpu: 1m, memory: 4Mi}}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata: {name: report-export, namespace: shop-batch}
+spec:
+  schedule: "*/10 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: export
+              image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+              command: ["sh", "-c", "echo 'level=INFO exported 1204 rows'"]
+              resources: {requests: {cpu: 1m, memory: 4Mi}}
+---
+apiVersion: batch/v1
+kind: Job
+metadata: {name: ledger-sync-281101, namespace: shop-batch}
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: sync
+          image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+          command: ["sh", "-c", "echo 'level=INFO synced 5310 rows'"]
+          resources: {requests: {cpu: 1m, memory: 4Mi}}
+---
+apiVersion: batch/v1
+kind: Job
+metadata: {name: ledger-sync-281102, namespace: shop-batch}
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: sync
+          image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+          command: ["sh", "-c", "echo 'level=INFO synced 5310 rows'"]
+          resources: {requests: {cpu: 1m, memory: 4Mi}}
+---
+apiVersion: batch/v1
+kind: Job
+metadata: {name: ledger-sync-281103, namespace: shop-batch}
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: sync
+          image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+          command: ["sh", "-c", "echo 'level=INFO synced 5310 rows'"]
+          resources: {requests: {cpu: 1m, memory: 4Mi}}
+---
+apiVersion: batch/v1
+kind: Job
+metadata: {name: ledger-sync-281104, namespace: shop-batch}
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: sync
+          image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+          command: ["sh", "-c", "echo 'level=INFO synced 5310 rows'"]
+          resources: {requests: {cpu: 1m, memory: 4Mi}}
+---
+apiVersion: batch/v1
+kind: Job
+metadata: {name: ledger-sync-281105, namespace: shop-batch}
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: sync
+          image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+          command: ["sh", "-c", "echo 'level=INFO synced 5310 rows'"]
+          resources: {requests: {cpu: 1m, memory: 4Mi}}
+---
+apiVersion: batch/v1
+kind: Job
+metadata: {name: ledger-sync-281106, namespace: shop-batch}
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: sync
+          image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+          command: ["sh", "-c", "echo 'level=INFO synced 5310 rows'"]
+          resources: {requests: {cpu: 1m, memory: 4Mi}}
+---
+apiVersion: batch/v1
+kind: Job
+metadata: {name: ledger-sync-281107, namespace: shop-batch}
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: sync
+          image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+          command: ["sh", "-c", "echo 'level=INFO synced 5310 rows'"]
+          resources: {requests: {cpu: 1m, memory: 4Mi}}
+---
+apiVersion: batch/v1
+kind: Job
+metadata: {name: ledger-sync-281108, namespace: shop-batch}
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: sync
+          image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+          command: ["sh", "-c", "echo 'level=INFO synced 5310 rows'"]
+          resources: {requests: {cpu: 1m, memory: 4Mi}}
+---
+apiVersion: batch/v1
+kind: Job
+metadata: {name: ledger-sync-281109, namespace: shop-batch}
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: sync
+          image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+          command: ["sh", "-c", "echo 'level=INFO synced 5310 rows'"]
+          resources: {requests: {cpu: 1m, memory: 4Mi}}
+---
+apiVersion: batch/v1
+kind: Job
+metadata: {name: ledger-sync-281110, namespace: shop-batch}
+spec:
+  backoffLimit: 0
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: sync
+          image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+          command: ["sh", "-c", "echo 'level=INFO synced 5310 rows'"]
+          resources: {requests: {cpu: 1m, memory: 4Mi}}

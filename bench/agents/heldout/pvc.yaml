@@ -1,0 +1,78 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata: {name: held-pvc}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: api-gateway, namespace: held-pvc}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: api-gateway}}
+  template:
+    metadata:
+      labels: {app: api-gateway}
+    spec:
+      containers:
+      - name: api-gateway
+        image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+        command: ["sh", "-c"]
+        args:
+        - |
+          while true; do echo "$(date -u +%FT%TZ) level=info msg=\"routed 40 requests upstream=ok\""; sleep 30; done
+        resources: {requests: {cpu: 1m, memory: 4Mi}}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: {name: audit-data, namespace: held-pvc}
+spec:
+  accessModes: [ReadWriteOnce]
+  resources: {requests: {storage: 16Mi}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: audit-log, namespace: held-pvc}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: audit-log}}
+  template:
+    metadata: {labels: {app: audit-log}}
+    spec:
+      containers:
+      - name: audit-log
+        image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+        command: ["sh", "-c"]
+        args:
+        - |
+          while true; do echo "$(date -u +%FT%TZ) level=info msg=\"appended entry to /data/audit.log\""; echo x >> /data/audit.log; sleep 30; done
+        volumeMounts: [{name: data, mountPath: /data}]
+        resources: {requests: {cpu: 1m, memory: 4Mi}}
+      volumes: [{name: data, persistentVolumeClaim: {claimName: audit-data}}]
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata: {name: ledger-data, namespace: held-pvc}
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: fast-ssd
+  resources: {requests: {storage: 16Mi}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: payments-ledger, namespace: held-pvc}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: payments-ledger}}
+  template:
+    metadata: {labels: {app: payments-ledger}}
+    spec:
+      containers:
+      - name: payments-ledger
+        image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+        command: ["sh", "-c"]
+        args:
+        - |
+          while true; do echo "$(date -u +%FT%TZ) level=info msg=\"ledger checkpoint written to /var/ledger\""; sleep 30; done
+        volumeMounts: [{name: ledger, mountPath: /var/ledger}]
+        resources: {requests: {cpu: 1m, memory: 4Mi}}
+      volumes: [{name: ledger, persistentVolumeClaim: {claimName: ledger-data}}]

@@ -1,0 +1,120 @@
+{
+   "conversation" : [
+      {
+         "ask" : "Finance reports that customer statements are not being generated. The statement-worker service logs show it cannot get data from ledger-api, but ledger-api itself looks healthy and the ledger web page still works.",
+         "must" : [
+            [
+               "NetworkPolicy|network polic|netpol"
+            ],
+            [
+               "ledger-api-ingress|role[=: ]+\"?frontend"
+            ],
+            [
+               "statement-worker"
+            ]
+         ]
+      },
+      {
+         "ask" : "The payments-ledger service has no running pod. Nothing is crashing and nobody changed the code; it just never starts.",
+         "must" : [
+            [
+               "fast-ssd"
+            ],
+            [
+               "ledger-data|PersistentVolumeClaim|PVC|claim"
+            ],
+            [
+               "not found|does not exist|no such|missing|no storage ?class|Pending|unbound"
+            ]
+         ]
+      },
+      {
+         "ask" : "We scaled report-worker up to 4 replicas to clear a backlog, but only 2 pods are running and the other 2 never appear.",
+         "must" : [
+            [
+               "ResourceQuota|quota"
+            ],
+            [
+               "team-compute|pods[=: ]+\"?4|limit(ed)? (of )?4|exceeded"
+            ]
+         ]
+      },
+      {
+         "ask" : "The invoice-api pod never becomes ready and never serves traffic. It has been like that since the last deploy.",
+         "must" : [
+            [
+               "init"
+            ],
+            [
+               "feature-flags"
+            ],
+            [
+               "/ready/v2|404|not found"
+            ]
+         ]
+      },
+      {
+         "ask" : "checkout-api is slow during traffic spikes and should scale out, but it stays at one replica no matter the load.",
+         "must" : [
+            [
+               "HPA|HorizontalPodAutoscaler|autoscaler"
+            ],
+            [
+               "log-shipper"
+            ],
+            [
+               "cpu request|request for cpu|missing request|no cpu request|without a cpu|cpu.{0,30}(request|unknown)"
+            ]
+         ]
+      },
+      {
+         "ask" : "The dashboard keeps warning that the export is stale. The nightly export has not produced a new file for days and nobody got an error.",
+         "must" : [
+            [
+               "nightly-export"
+            ],
+            [
+               "31 2|Feb(ruary)? 31|31st of Feb|0 0 31"
+            ],
+            [
+               "never|impossible|does not exist|invalid|no job|not (run|fire|trigger)"
+            ]
+         ]
+      },
+      {
+         "ask" : "The storefront shows no stock levels. Its logs say it is refused when it calls the inventory service, but the inventory pod is running and ready.",
+         "must" : [
+            [
+               "inventory"
+            ],
+            [
+               "8081"
+            ],
+            [
+               "8080"
+            ],
+            [
+               "targetPort|target port|forward|mismatch|wrong port|not match|does not match"
+            ]
+         ]
+      },
+      {
+         "ask" : "The nightly ledger-reconcile job did not finish and finance has no reconciliation report this morning.",
+         "must" : [
+            [
+               "ledger-reconcile"
+            ],
+            [
+               "checksum"
+            ],
+            [
+               "4471|9f2c1e|77ab04|mismatch"
+            ]
+         ]
+      }
+   ],
+   "must" : [],
+   "namespace" : "default",
+   "root_cause" : "The eight held-out faults, asked as one conversation. Apply bench/agents/heldout first.",
+   "symptom" : "A working session with eight reports from users, one after the other."
+}

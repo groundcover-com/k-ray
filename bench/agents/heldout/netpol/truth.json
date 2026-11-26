@@ -1,0 +1,12 @@
+{
+  "namespace": "held-netpol",
+  "symptom": "Finance reports that customer statements are not being generated. The statement-worker service logs show it cannot get data from ledger-api, but ledger-api itself looks healthy and the ledger web page still works.",
+  "ready_cmd": "logs -n held-netpol deploy/statement-worker --tail=3",
+  "ready_when": "timed out",
+  "root_cause": "The NetworkPolicy ledger-api-ingress allows ingress to ledger-api only from pods labelled role=frontend. statement-worker is labelled role=batch, so its traffic is dropped and it times out.",
+  "must": [
+    ["NetworkPolicy|network polic|netpol"],
+    ["ledger-api-ingress|role[=: ]+\"?frontend"],
+    ["statement-worker"]
+  ]
+}

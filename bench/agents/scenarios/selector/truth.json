@@ -1,0 +1,4 @@
+{"symptom": "Requests to the service checkout in namespace bench-selector fail, but its pods look healthy.",
+ "ready_when": "2/2|1/1 +Running",
+ "root_cause": "The service selector app=checkout matches no pod: the pods have the label app=checkout-v2, so the service has no endpoints.",
+ "must": [["selector"], ["checkout-v2"], ["no endpoints", "no backends", "0 endpoints", "match(es)? no", "does not match", "doesn't match", "mismatch", "matches 0", "not match", "zero endpoints", "empty", "none"]]}

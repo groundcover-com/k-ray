@@ -1,0 +1,15 @@
+{
+  "kubectl": [
+    "kubectl get pods -A | grep -i edge",
+    "kubectl logs -n shop-web deploy/edge --tail=20",
+    "kubectl get svc,endpointslices -n shop-data",
+    "kubectl describe svc inventory -n shop-data",
+    "kubectl get endpointslices -n shop-data -l kubernetes.io/service-name=inventory -o yaml",
+    "kubectl get deploy inventory -n shop-data -o yaml"
+  ],
+  "kray": [
+    "kray get pods -A | grep -i edge",
+    "kray logs -l app=edge -n shop-web",
+    "kray describe svc inventory -n shop-data"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "namespace": "held-quota",
+  "symptom": "We scaled report-worker up to 4 replicas to clear a backlog, but only 2 pods are running and the other 2 never appear.",
+  "ready_cmd": "get rs -n held-quota",
+  "ready_when": "report-worker-[a-z0-9]+\\s+4\\s+2\\s+2",
+  "root_cause": "The ResourceQuota team-compute limits the namespace to 4 pods and 4 already exist, so the ReplicaSet cannot create the extra report-worker pods (FailedCreate: exceeded quota).",
+  "must": [
+    ["ResourceQuota|quota"],
+    ["team-compute|pods[=: ]+\"?4|limit(ed)? (of )?4|exceeded"]
+  ]
+}

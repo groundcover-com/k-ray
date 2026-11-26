@@ -1,0 +1,6 @@
+{"symptom": "Some customers get an error when they pay at checkout. It affects roughly one payment in seven. Find the root cause of the checkout errors.",
+ "namespace": "shop-orders",
+ "ready_cmd": "logs -n shop-orders checkout-19 --tail=3",
+ "ready_when": "startup complete",
+ "root_cause": "A few checkout replicas (3, 10 and 17) fail payment authorization: the call to payment-gateway.paynet.example:443 times out after 5000 ms.",
+ "must": [["payment.?gateway", "paynet"], ["timed out", "time.?out"]]}

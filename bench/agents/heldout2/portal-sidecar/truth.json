@@ -1,0 +1,8 @@
+{
+  "symptom": "portal-api pods show 1/2 ready and the restart count keeps climbing, but the portal itself answers fine.",
+  "namespace": "h2-portal",
+  "ready_cmd": "get pods -n h2-portal --no-headers",
+  "ready_when": "portal-api\\S+\\s+1/2",
+  "root_cause": "The log-shipper sidecar reads /logs/access.log, but the app writes /logs/app.log, so cat fails and the sidecar crash-loops while the app stays healthy.",
+  "must": [["log-shipper|sidecar"],["access\\.log|app\\.log|no such file|wrong (file|path)|file name|filename"]]
+}

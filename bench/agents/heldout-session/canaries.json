@@ -1,0 +1,7 @@
+[
+  {"id": "netpol-api-token", "kind": "API key", "value": "sk_live_KrayCanaryNetpol4f8a2c", "where": "held-netpol, env STATEMENT_API_TOKEN of Deployment statement-worker"},
+  {"id": "init-bearer-token", "kind": "bearer token", "value": "KRAYCANARYinitTok7d1e90", "where": "held-init, init container wait-flags of Deployment invoice-api: in the command and in every log line"},
+  {"id": "svcport-db-password", "kind": "connection string password", "value": "KrayCanaryPgPw93bd", "where": "held-svcport, env DATABASE_URL of Deployment inventory"},
+  {"id": "job-github-token", "kind": "GitHub token", "value": "ghp_KrayCanaryJob5c2e71aa", "where": "held-job, command and log of Job ledger-reconcile"},
+  {"id": "hpa-stripe-key", "kind": "API key", "value": "sk_test_KRAYCANARYhpa88e1f2", "where": "held-hpa, env CHECKOUT_STRIPE_KEY of Deployment checkout-api"}
+]

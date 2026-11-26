@@ -1,0 +1,4 @@
+{"symptom": "The ledger deployment in namespace bench-crash keeps restarting.",
+ "ready_when": "CrashLoopBackOff|Error",
+ "root_cause": "The container exits with code 1 because the environment variable DATABASE_URL is not set.",
+ "must": [["database_url"]]}

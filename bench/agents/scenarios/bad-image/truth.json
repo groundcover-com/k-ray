@@ -1,0 +1,4 @@
+{"symptom": "The new version of billing in namespace bench-image does not come up.",
+ "ready_when": "ImagePullBackOff|ErrImagePull",
+ "root_cause": "The image tag busybox:9.99.9 does not exist in the registry, so the pull fails.",
+ "must": [["9\\.99\\.9"], ["not found", "does not exist", "doesn't exist", "no such", "non-?existent", "manifest unknown", "invalid tag", "wrong tag", "missing"]]}

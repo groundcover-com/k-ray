@@ -1,0 +1,13 @@
+{
+  "namespace": "held-svcport",
+  "symptom": "The storefront shows no stock levels. Its logs say it is refused when it calls the inventory service, but the inventory pod is running and ready.",
+  "ready_cmd": "logs -n held-svcport deploy/storefront --tail=3",
+  "ready_when": "connection refused",
+  "root_cause": "The Service inventory forwards port 80 to targetPort 8081, but the inventory container listens on 8080, so connections are refused.",
+  "must": [
+    ["inventory"],
+    ["8081"],
+    ["8080"],
+    ["targetPort|target port|forward|mismatch|wrong port|not match|does not match"]
+  ]
+}

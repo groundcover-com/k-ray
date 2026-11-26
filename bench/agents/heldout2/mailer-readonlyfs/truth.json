@@ -1,0 +1,8 @@
+{
+  "symptom": "smtp-relay keeps restarting and I cannot keep it up. The logs say very little.",
+  "namespace": "h2-mailer",
+  "ready_cmd": "get pods -n h2-mailer --no-headers",
+  "ready_when": "smtp-relay\\S+\\s+0/1\\s+(CrashLoopBackOff|Error)",
+  "root_cause": "The smtp-relay container has securityContext.readOnlyRootFilesystem true, and it tries to create /etc/smtp-relay.lock, which fails with Read-only file system.",
+  "must": [["read-only|readonly|read only|readonlyrootfilesystem"],["smtp-relay\\.lock|lock|root filesystem|rootfs|/etc|securitycontext"]]
+}

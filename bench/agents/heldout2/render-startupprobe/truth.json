@@ -1,0 +1,8 @@
+{
+  "symptom": "pdf-render never becomes Ready and restarts again and again. Its logs only ever say it is warming up.",
+  "namespace": "h2-render",
+  "ready_cmd": "get pods -n h2-render --no-headers",
+  "ready_when": "pdf-render\\S+\\s+0/1\\s+\\S+\\s+[1-9]",
+  "root_cause": "The startupProbe allows only 3 failures at a 5s period (15s), but the font cache warm-up takes about 45s, so the kubelet kills the container before it is ready.",
+  "must": [["startup ?probe"],["threshold|15 ?s|too short|slow|45|window|period|warm"]]
+}

@@ -1,0 +1,10 @@
+[
+  {"id": "gateway-host", "task": "stack-traces", "kind": "hostname", "value": "payment-gateway.paynet.example", "where": "the Caused by line of the trace"},
+  {"id": "faulty-pod-3", "task": "stack-traces", "kind": "pod name", "value": "checkout-3", "where": "pod in shop-orders"},
+  {"id": "faulty-pod-10", "task": "stack-traces", "kind": "pod name", "value": "checkout-10", "where": "pod in shop-orders"},
+  {"id": "faulty-pod-17", "task": "stack-traces", "kind": "pod name", "value": "checkout-17", "where": "pod in shop-orders"},
+  {"id": "bad-probe-path", "task": "bad-release", "kind": "probe path", "value": "/api/health", "where": "readiness probe of revision 2"},
+  {"id": "probe-status", "task": "bad-release", "kind": "status", "value": "statuscode: 404", "where": "Unhealthy event"},
+  {"id": "service-target-port", "task": "wrong-port", "kind": "port name", "value": "http-api", "where": "targetPort of Service inventory"},
+  {"id": "upstream-host", "task": "wrong-port", "kind": "hostname", "value": "inventory.shop-data.svc.cluster.local", "where": "error lines of edge"}
+]

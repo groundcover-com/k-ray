@@ -1,0 +1,54 @@
+apiVersion: v1
+kind: Namespace
+metadata: {name: parts-report}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: report-builder, namespace: parts-report}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: report-builder}}
+  template:
+    metadata: {labels: {app: report-builder}}
+    spec:
+      containers:
+        - name: report-builder
+          image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+          command:
+            - sh
+            - -c
+            - |
+              value=""
+              for a in "$@"; do
+                if [ -n "$value" ]; then value=""; continue; fi
+                case "$a" in
+                  --listen=*|--workers=*|--format=*) ;;
+                  --password) value=1 ;;
+                  *) echo "report-builder: unknown flag: ${a%%=*}" >&2
+                     echo "usage: report-builder --listen=ADDR --password VALUE --workers=N --format=pdf|csv" >&2
+                     exit 2 ;;
+                esac
+              done
+              echo "level=info msg=\"report-builder listening\" addr=:8080"
+              sleep 3600
+            - report-builder
+          args: ["--listen=:8080", "--password", "KrayCanaryRbcr1K EkChJhFhhgBI7hva ibaFrr5l8YOLKrai", "--worker-count=4", "--format=pdf"]
+          resources: {requests: {cpu: 1m, memory: 4Mi}, limits: {memory: 16Mi}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: report-scheduler, namespace: parts-report}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: report-scheduler}}
+  template:
+    metadata: {labels: {app: report-scheduler}}
+    spec:
+      containers:
+        - name: report-scheduler
+          image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+          command: ["sh", "-c"]
+          args:
+            - |
+              i=0; while true; do i=$((i+1)); echo "level=info msg=\"report queued\" n=$i"; sleep 20; done
+          resources: {requests: {cpu: 1m, memory: 4Mi}, limits: {memory: 16Mi}}

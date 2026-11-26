@@ -1,0 +1,1235 @@
+[
+ {
+  "apiVersion": "v1",
+  "kind": "Namespace",
+  "metadata": {
+   "name": "shop",
+   "creationTimestamp": "2026-11-01T00:00:00Z"
+  },
+  "status": {
+   "phase": "Active"
+  }
+ },
+ {
+  "apiVersion": "v1",
+  "kind": "Node",
+  "metadata": {
+   "name": "node-a",
+   "creationTimestamp": "2026-11-01T00:00:00Z",
+   "labels": {
+    "node-role.kubernetes.io/worker": ""
+   }
+  },
+  "status": {
+   "allocatable": {
+    "cpu": "4",
+    "memory": "16Gi"
+   },
+   "nodeInfo": {
+    "kubeletVersion": "v1.37.0"
+   },
+   "conditions": [
+    {
+     "type": "Ready",
+     "status": "True",
+     "lastHeartbeatTime": "2026-11-13T11:59:00Z"
+    }
+   ],
+   "images": [
+    {
+     "names": [
+      "registry.example/app:1.2"
+     ],
+     "sizeBytes": 123
+    }
+   ]
+  }
+ },
+ {
+  "apiVersion": "apps/v1",
+  "kind": "Deployment",
+  "metadata": {
+   "name": "api",
+   "namespace": "shop",
+   "uid": "dep-uid",
+   "creationTimestamp": "2026-11-10T00:00:00Z",
+   "labels": {
+    "app": "api"
+   },
+   "annotations": {
+    "kubectl.kubernetes.io/last-applied-configuration": "{\"spec\":{\"template\":{\"spec\":{\"containers\":[{\"env\":[{\"name\":\"DB_PASSWORD\",\"value\":\"lastAppliedPw6\"}]}]}}}}",
+    "example.com/webhook-token": "webhookTok3"
+   }
+  },
+  "spec": {
+   "replicas": 3,
+   "selector": {
+    "matchLabels": {
+     "app": "api"
+    }
+   },
+   "progressDeadlineSeconds": 600,
+   "template": {
+    "metadata": {
+     "labels": {
+      "app": "api"
+     }
+    },
+    "spec": {
+     "containers": [
+      {
+       "name": "api",
+       "image": "registry.example/app:1.2",
+       "args": [
+        "--port=8080",
+        "--token",
+        "argTokenValue2"
+       ],
+       "env": [
+        {
+         "name": "DB_PASSWORD",
+         "value": "envSecretValue1"
+        },
+        {
+         "name": "LOG_LEVEL",
+         "value": "info"
+        },
+        {
+         "name": "DB_PASS_REF",
+         "valueFrom": {
+          "secretKeyRef": {
+           "name": "db-credentials",
+           "key": "password"
+          }
+         }
+        }
+       ],
+       "resources": {
+        "requests": {
+         "cpu": "500m",
+         "memory": "512Mi"
+        },
+        "limits": {
+         "cpu": "1",
+         "memory": "1Gi"
+        }
+       }
+      },
+      {
+       "name": "sidecar",
+       "image": "registry.example/proxy:2"
+      }
+     ]
+    }
+   }
+  },
+  "status": {
+   "replicas": 3,
+   "readyReplicas": 1,
+   "availableReplicas": 1,
+   "updatedReplicas": 3
+  }
+ },
+ {
+  "apiVersion": "apps/v1",
+  "kind": "ReplicaSet",
+  "metadata": {
+   "name": "api-7f9c8",
+   "namespace": "shop",
+   "uid": "rs-uid",
+   "creationTimestamp": "2026-11-10T00:00:00Z",
+   "labels": {
+    "app": "api"
+   },
+   "ownerReferences": [
+    {
+     "apiVersion": "apps/v1",
+     "kind": "Deployment",
+     "name": "api",
+     "uid": "dep-uid",
+     "controller": true
+    }
+   ]
+  },
+  "spec": {
+   "replicas": 3,
+   "selector": {
+    "matchLabels": {
+     "app": "api"
+    }
+   }
+  },
+  "status": {
+   "replicas": 3,
+   "readyReplicas": 1
+  }
+ },
+ {
+  "apiVersion": "v1",
+  "kind": "Pod",
+  "metadata": {
+   "name": "api-7f9c8-x2k",
+   "namespace": "shop",
+   "uid": "pod-uid-1",
+   "creationTimestamp": "2026-11-13T10:00:00Z",
+   "labels": {
+    "app": "api"
+   },
+   "ownerReferences": [
+    {
+     "apiVersion": "apps/v1",
+     "kind": "ReplicaSet",
+     "name": "api-7f9c8",
+     "uid": "rs-uid",
+     "controller": true
+    }
+   ]
+  },
+  "spec": {
+   "nodeName": "node-a",
+   "containers": [
+    {
+     "name": "api",
+     "image": "registry.example/app:1.2",
+     "env": [
+      {
+       "name": "DB_PASSWORD",
+       "value": "envSecretValue1"
+      }
+     ],
+     "resources": {
+      "requests": {
+       "cpu": "500m",
+       "memory": "512Mi"
+      },
+      "limits": {
+       "cpu": "1",
+       "memory": "1Gi"
+      }
+     }
+    },
+    {
+     "name": "sidecar",
+     "image": "registry.example/proxy:2"
+    }
+   ]
+  },
+  "status": {
+   "phase": "Running",
+   "containerStatuses": [
+    {
+     "name": "api",
+     "ready": false,
+     "restartCount": 14,
+     "state": {
+      "waiting": {
+       "reason": "CrashLoopBackOff"
+      }
+     },
+     "lastState": {
+      "terminated": {
+       "exitCode": 137,
+       "reason": "OOMKilled"
+      }
+     }
+    },
+    {
+     "name": "sidecar",
+     "ready": true,
+     "restartCount": 0,
+     "state": {
+      "running": {}
+     }
+    }
+   ]
+  }
+ },
+ {
+  "apiVersion": "v1",
+  "kind": "Pod",
+  "metadata": {
+   "name": "api-7f9c8-ok",
+   "namespace": "shop",
+   "uid": "pod-uid-2",
+   "creationTimestamp": "2026-11-13T09:00:00Z",
+   "labels": {
+    "app": "api"
+   }
+  },
+  "spec": {
+   "nodeName": "node-a",
+   "containers": [
+    {
+     "name": "api",
+     "image": "registry.example/app:1.2"
+    }
+   ]
+  },
+  "status": {
+   "phase": "Running",
+   "containerStatuses": [
+    {
+     "name": "api",
+     "ready": true,
+     "restartCount": 0,
+     "state": {
+      "running": {}
+     }
+    }
+   ]
+  }
+ },
+ {
+  "apiVersion": "v1",
+  "kind": "Pod",
+  "metadata": {
+   "name": "worker-1",
+   "namespace": "shop",
+   "uid": "pod-uid-3",
+   "creationTimestamp": "2026-11-13T11:50:00Z",
+   "labels": {
+    "app": "worker"
+   }
+  },
+  "spec": {
+   "containers": [
+    {
+     "name": "worker",
+     "image": "registry.example/worker:1",
+     "resources": {
+      "requests": {
+       "cpu": "500m",
+       "memory": "20Gi"
+      }
+     }
+    }
+   ]
+  },
+  "status": {
+   "phase": "Pending",
+   "conditions": [
+    {
+     "type": "PodScheduled",
+     "status": "False",
+     "message": "0/1 nodes are available: 1 Insufficient memory."
+    }
+   ]
+  }
+ },
+ {
+  "apiVersion": "v1",
+  "kind": "Service",
+  "metadata": {
+   "name": "api",
+   "namespace": "shop",
+   "uid": "svc-uid",
+   "creationTimestamp": "2026-11-10T00:00:00Z",
+   "annotations": {
+    "example.com/webhook-token": "webhookTok3"
+   }
+  },
+  "spec": {
+   "type": "ClusterIP",
+   "clusterIP": "10.96.0.10",
+   "selector": {
+    "app": "api"
+   },
+   "ports": [
+    {
+     "port": 80,
+     "protocol": "TCP"
+    }
+   ],
+   "sessionAffinity": "None"
+  }
+ },
+ {
+  "apiVersion": "discovery.k8s.io/v1",
+  "kind": "EndpointSlice",
+  "metadata": {
+   "name": "api-abc",
+   "namespace": "shop",
+   "labels": {
+    "kubernetes.io/service-name": "api"
+   }
+  },
+  "ports": [
+   {
+    "port": 8080,
+    "protocol": "TCP"
+   }
+  ],
+  "endpoints": [
+   {
+    "addresses": [
+     "10.0.0.5"
+    ],
+    "conditions": {
+     "ready": false
+    }
+   },
+   {
+    "addresses": [
+     "10.0.0.6"
+    ],
+    "conditions": {
+     "ready": true
+    }
+   }
+  ]
+ },
+ {
+  "apiVersion": "v1",
+  "kind": "ConfigMap",
+  "metadata": {
+   "name": "app-config",
+   "namespace": "shop",
+   "creationTimestamp": "2026-11-10T00:00:00Z"
+  },
+  "data": {
+   "api_key": "cfgApiKey4",
+   "config.yaml": "db:\n  host: db\n  password: cfgPassword5\nlog: info\n"
+  }
+ },
+ {
+  "apiVersion": "v1",
+  "kind": "Event",
+  "metadata": {
+   "name": "api-7f9c8-x2k.1",
+   "namespace": "shop",
+   "creationTimestamp": "2026-11-13T10:01:00Z"
+  },
+  "involvedObject": {
+   "kind": "Pod",
+   "name": "api-7f9c8-x2k",
+   "uid": "pod-uid-1",
+   "namespace": "shop"
+  },
+  "type": "Warning",
+  "reason": "BackOff",
+  "message": "Back-off restarting failed container api in pod api-7f9c8-x2k",
+  "count": 37,
+  "lastTimestamp": "2026-11-13T11:58:00Z"
+ },
+ {
+  "apiVersion": "v1",
+  "kind": "Event",
+  "metadata": {
+   "name": "api-7f9c8-x2k.2",
+   "namespace": "shop",
+   "creationTimestamp": "2026-11-13T10:00:30Z"
+  },
+  "involvedObject": {
+   "kind": "Pod",
+   "name": "api-7f9c8-x2k",
+   "uid": "pod-uid-1",
+   "namespace": "shop"
+  },
+  "type": "Normal",
+  "reason": "Pulled",
+  "message": "Container image already present on machine",
+  "count": 15,
+  "lastTimestamp": "2026-11-13T11:57:00Z"
+ },
+ {
+  "apiVersion": "v1",
+  "kind": "Event",
+  "metadata": {
+   "name": "worker-1.1",
+   "namespace": "shop",
+   "creationTimestamp": "2026-11-13T11:50:00Z"
+  },
+  "involvedObject": {
+   "kind": "Pod",
+   "name": "worker-1",
+   "uid": "pod-uid-3",
+   "namespace": "shop"
+  },
+  "type": "Warning",
+  "reason": "FailedScheduling",
+  "message": "0/1 nodes are available: 1 Insufficient memory.",
+  "count": 4,
+  "lastTimestamp": "2026-11-13T11:59:00Z"
+ },
+ {
+  "apiVersion": "v1",
+  "kind": "Event",
+  "metadata": {
+   "name": "old.1",
+   "namespace": "shop",
+   "creationTimestamp": "2026-11-13T01:00:00Z"
+  },
+  "involvedObject": {
+   "kind": "Pod",
+   "name": "old-pod",
+   "uid": "pod-uid-9",
+   "namespace": "shop"
+  },
+  "type": "Normal",
+  "reason": "Scheduled",
+  "message": "Successfully assigned shop/old-pod to node-a",
+  "count": 1,
+  "lastTimestamp": "2026-11-13T01:00:00Z"
+ },
+ {
+  "apiVersion": "v1",
+  "kind": "Namespace",
+  "metadata": {
+   "name": "pay",
+   "creationTimestamp": "2026-11-01T00:00:00Z"
+  },
+  "status": {
+   "phase": "Active"
+  }
+ },
+ {
+  "apiVersion": "v1",
+  "kind": "Service",
+  "metadata": {
+   "name": "checkout",
+   "namespace": "pay",
+   "uid": "svc-checkout",
+   "creationTimestamp": "2026-11-10T00:00:00Z"
+  },
+  "spec": {
+   "type": "ClusterIP",
+   "clusterIP": "10.96.0.20",
+   "selector": {
+    "app": "checkout"
+   },
+   "ports": [
+    {
+     "port": 80,
+     "targetPort": 8080,
+     "protocol": "TCP"
+    }
+   ]
+  }
+ },
+ {
+  "apiVersion": "v1",
+  "kind": "Pod",
+  "metadata": {
+   "name": "checkout-v2-a",
+   "namespace": "pay",
+   "uid": "pod-co-a",
+   "creationTimestamp": "2026-11-13T09:00:00Z",
+   "labels": {
+    "app": "checkout-v2"
+   }
+  },
+  "spec": {
+   "containers": [
+    {
+     "name": "web",
+     "image": "registry.example/checkout:2.0",
+     "resources": {
+      "requests": {
+       "cpu": "100m",
+       "memory": "128Mi"
+      }
+     }
+    }
+   ],
+   "nodeName": "node-a"
+  },
+  "status": {
+   "phase": "Running",
+   "conditions": [
+    {
+     "type": "Ready",
+     "status": "True"
+    }
+   ],
+   "containerStatuses": [
+    {
+     "name": "web",
+     "ready": true,
+     "restartCount": 0,
+     "state": {
+      "running": {}
+     }
+    }
+   ]
+  }
+ },
+ {
+  "apiVersion": "v1",
+  "kind": "Pod",
+  "metadata": {
+   "name": "checkout-v2-b",
+   "namespace": "pay",
+   "uid": "pod-co-b",
+   "creationTimestamp": "2026-11-13T09:00:00Z",
+   "labels": {
+    "app": "checkout-v2"
+   }
+  },
+  "spec": {
+   "containers": [
+    {
+     "name": "web",
+     "image": "registry.example/checkout:2.0",
+     "resources": {
+      "requests": {
+       "cpu": "100m",
+       "memory": "128Mi"
+      }
+     }
+    }
+   ],
+   "nodeName": "node-a"
+  },
+  "status": {
+   "phase": "Running",
+   "conditions": [
+    {
+     "type": "Ready",
+     "status": "True"
+    }
+   ],
+   "containerStatuses": [
+    {
+     "name": "web",
+     "ready": true,
+     "restartCount": 0,
+     "state": {
+      "running": {}
+     }
+    }
+   ]
+  }
+ },
+ {
+  "apiVersion": "v1",
+  "kind": "Pod",
+  "metadata": {
+   "name": "img-1",
+   "namespace": "pay",
+   "uid": "pod-img-1",
+   "creationTimestamp": "2026-11-13T11:40:00Z",
+   "labels": {
+    "app": "pay"
+   }
+  },
+  "spec": {
+   "containers": [
+    {
+     "name": "pay",
+     "image": "registry.example/pay:1.4.2"
+    }
+   ],
+   "nodeName": "node-a",
+   "imagePullSecrets": [
+    {
+     "name": "regcred"
+    }
+   ]
+  },
+  "status": {
+   "phase": "Pending",
+   "conditions": [
+    {
+     "type": "PodScheduled",
+     "status": "True"
+    }
+   ],
+   "containerStatuses": [
+    {
+     "name": "pay",
+     "ready": false,
+     "restartCount": 0,
+     "state": {
+      "waiting": {
+       "reason": "ImagePullBackOff",
+       "message": "Back-off pulling image \"registry.example/pay:1.4.2\""
+      }
+     }
+    }
+   ]
+  }
+ },
+ {
+  "apiVersion": "v1",
+  "kind": "Event",
+  "metadata": {
+   "name": "img-1.1",
+   "namespace": "pay",
+   "creationTimestamp": "2026-11-13T11:58:30Z"
+  },
+  "involvedObject": {
+   "kind": "Pod",
+   "name": "img-1",
+   "uid": "pod-img-1",
+   "namespace": "pay"
+  },
+  "type": "Warning",
+  "reason": "Failed",
+  "message": "Failed to pull image \"registry.example/pay:1.4.2\": rpc error: code = NotFound desc = failed to pull and unpack image \"registry.example/pay:1.4.2\": failed to resolve reference \"registry.example/pay:1.4.2\": registry.example/pay:1.4.2: not found",
+  "count": 6,
+  "lastTimestamp": "2026-11-13T11:58:30Z"
+ },
+ {
+  "apiVersion": "v1",
+  "kind": "Pod",
+  "metadata": {
+   "name": "probe-1",
+   "namespace": "pay",
+   "uid": "pod-probe-1",
+   "creationTimestamp": "2026-11-13T09:00:00Z",
+   "labels": {
+    "app": "web"
+   }
+  },
+  "spec": {
+   "containers": [
+    {
+     "name": "web",
+     "image": "registry.example/web:3.1",
+     "readinessProbe": {
+      "httpGet": {
+       "path": "/ready",
+       "port": 8080
+      }
+     }
+    }
+   ],
+   "nodeName": "node-a"
+  },
+  "status": {
+   "phase": "Running",
+   "conditions": [
+    {
+     "type": "Ready",
+     "status": "False"
+    }
+   ],
+   "containerStatuses": [
+    {
+     "name": "web",
+     "ready": false,
+     "restartCount": 0,
+     "state": {
+      "running": {}
+     }
+    }
+   ]
+  }
+ },
+ {
+  "apiVersion": "v1",
+  "kind": "Event",
+  "metadata": {
+   "name": "probe-1.1",
+   "namespace": "pay",
+   "creationTimestamp": "2026-11-13T11:59:10Z"
+  },
+  "involvedObject": {
+   "kind": "Pod",
+   "name": "probe-1",
+   "uid": "pod-probe-1",
+   "namespace": "pay"
+  },
+  "type": "Warning",
+  "reason": "Unhealthy",
+  "message": "Readiness probe failed: HTTP probe failed with statuscode: 503",
+  "count": 42,
+  "lastTimestamp": "2026-11-13T11:59:10Z"
+ },
+ {
+  "apiVersion": "v1",
+  "kind": "Pod",
+  "metadata": {
+   "name": "crash-1",
+   "namespace": "pay",
+   "uid": "pod-crash-1",
+   "creationTimestamp": "2026-11-13T09:00:00Z",
+   "labels": {
+    "app": "ledger"
+   },
+   "ownerReferences": [
+    {
+     "apiVersion": "apps/v1",
+     "kind": "ReplicaSet",
+     "name": "ledger-5d4f",
+     "uid": "rs-ledger",
+     "controller": true
+    }
+   ]
+  },
+  "spec": {
+   "containers": [
+    {
+     "name": "app",
+     "image": "registry.example/ledger:0.9",
+     "command": [
+      "sh",
+      "-c",
+      "run-ledger --mode=prod"
+     ],
+     "env": [
+      {
+       "name": "LOG_LEVEL",
+       "value": "info"
+      },
+      {
+       "name": "DB_PASSWORD",
+       "valueFrom": {
+        "secretKeyRef": {
+         "name": "ledger-db",
+         "key": "password"
+        }
+       }
+      },
+      {
+       "name": "API_TOKEN",
+       "value": "summarySecret1"
+      }
+     ]
+    }
+   ],
+   "nodeName": "node-a"
+  },
+  "status": {
+   "phase": "Running",
+   "conditions": [
+    {
+     "type": "Ready",
+     "status": "False"
+    }
+   ],
+   "containerStatuses": [
+    {
+     "name": "app",
+     "ready": false,
+     "restartCount": 7,
+     "state": {
+      "waiting": {
+       "reason": "CrashLoopBackOff"
+      }
+     },
+     "lastState": {
+      "terminated": {
+       "exitCode": 1,
+       "reason": "Error"
+      }
+     }
+    }
+   ]
+  }
+ },
+ {
+  "apiVersion": "v1",
+  "kind": "Pod",
+  "metadata": {
+   "name": "hot-1",
+   "namespace": "pay",
+   "uid": "pod-hot-1",
+   "creationTimestamp": "2026-11-13T09:00:00Z",
+   "labels": {
+    "app": "render"
+   }
+  },
+  "spec": {
+   "containers": [
+    {
+     "name": "render",
+     "image": "registry.example/render:5",
+     "resources": {
+      "requests": {
+       "cpu": "1",
+       "memory": "512Mi"
+      },
+      "limits": {
+       "cpu": "1",
+       "memory": "512Mi"
+      }
+     }
+    }
+   ],
+   "nodeName": "node-a"
+  },
+  "status": {
+   "phase": "Running",
+   "conditions": [
+    {
+     "type": "Ready",
+     "status": "True"
+    }
+   ],
+   "containerStatuses": [
+    {
+     "name": "render",
+     "ready": true,
+     "restartCount": 0,
+     "state": {
+      "running": {}
+     }
+    }
+   ]
+  }
+ },
+ {
+  "apiVersion": "v1",
+  "kind": "Pod",
+  "metadata": {
+   "name": "fat-1",
+   "namespace": "pay",
+   "uid": "pod-fat-1",
+   "creationTimestamp": "2026-11-13T09:00:00Z",
+   "labels": {
+    "app": "batch"
+   }
+  },
+  "spec": {
+   "containers": [
+    {
+     "name": "batch",
+     "image": "registry.example/batch:1",
+     "resources": {
+      "requests": {
+       "cpu": "1",
+       "memory": "4Gi"
+      }
+     }
+    }
+   ],
+   "nodeName": "node-a"
+  },
+  "status": {
+   "phase": "Running",
+   "conditions": [
+    {
+     "type": "Ready",
+     "status": "True"
+    }
+   ],
+   "containerStatuses": [
+    {
+     "name": "batch",
+     "ready": true,
+     "restartCount": 0,
+     "state": {
+      "running": {}
+     }
+    }
+   ]
+  }
+ },
+ {
+  "apiVersion": "v1",
+  "kind": "Pod",
+  "metadata": {
+   "name": "nolimit-1",
+   "namespace": "pay",
+   "uid": "pod-nolimit-1",
+   "creationTimestamp": "2026-11-13T09:00:00Z",
+   "labels": {
+    "app": "cache"
+   }
+  },
+  "spec": {
+   "containers": [
+    {
+     "name": "cache",
+     "image": "registry.example/cache:7"
+    }
+   ],
+   "nodeName": "node-a"
+  },
+  "status": {
+   "phase": "Running",
+   "conditions": [
+    {
+     "type": "Ready",
+     "status": "True"
+    }
+   ],
+   "containerStatuses": [
+    {
+     "name": "cache",
+     "ready": true,
+     "restartCount": 0,
+     "state": {
+      "running": {}
+     }
+    }
+   ]
+  }
+ },
+ {
+  "apiVersion": "v1",
+  "kind": "Service",
+  "metadata": {
+   "name": "web",
+   "namespace": "pay",
+   "uid": "svc-web",
+   "creationTimestamp": "2026-11-10T00:00:00Z"
+  },
+  "spec": {
+   "type": "ClusterIP",
+   "clusterIP": "10.96.0.21",
+   "selector": {
+    "app": "web"
+   },
+   "ports": [
+    {
+     "port": 80,
+     "targetPort": 8080,
+     "protocol": "TCP"
+    }
+   ]
+  }
+ },
+ {
+  "apiVersion": "discovery.k8s.io/v1",
+  "kind": "EndpointSlice",
+  "metadata": {
+   "name": "web-abc",
+   "namespace": "pay",
+   "labels": {
+    "kubernetes.io/service-name": "web"
+   }
+  },
+  "ports": [
+   {
+    "port": 8080,
+    "protocol": "TCP"
+   }
+  ],
+  "endpoints": [
+   {
+    "addresses": [
+     "10.0.1.7"
+    ],
+    "conditions": {
+     "ready": false
+    }
+   }
+  ]
+ },
+ {
+  "apiVersion": "v1",
+  "kind": "Pod",
+  "metadata": {
+   "name": "job-1",
+   "namespace": "pay",
+   "uid": "pod-job-1",
+   "creationTimestamp": "2026-11-13T11:45:00Z",
+   "labels": {
+    "app": "report"
+   }
+  },
+  "spec": {
+   "nodeName": "node-a",
+   "restartPolicy": "Never",
+   "containers": [
+    {
+     "name": "report",
+     "image": "registry.example/report:2",
+     "resources": {
+      "limits": {
+       "memory": "1Gi"
+      }
+     }
+    }
+   ]
+  },
+  "status": {
+   "phase": "Failed",
+   "containerStatuses": [
+    {
+     "name": "report",
+     "ready": false,
+     "restartCount": 0,
+     "state": {
+      "terminated": {
+       "exitCode": 137,
+       "reason": "OOMKilled"
+      }
+     }
+    }
+   ]
+  }
+ },
+ {
+  "apiVersion": "v1",
+  "kind": "Pod",
+  "metadata": {
+   "name": "vol-1",
+   "namespace": "pay",
+   "uid": "pod-vol-1",
+   "creationTimestamp": "2026-11-13T11:55:00Z",
+   "labels": {
+    "app": "portal"
+   }
+  },
+  "spec": {
+   "nodeName": "node-a",
+   "containers": [
+    {
+     "name": "portal",
+     "image": "registry.example/portal:4"
+    }
+   ],
+   "volumes": [
+    {
+     "name": "data",
+     "persistentVolumeClaim": {
+      "claimName": "portal-data"
+     }
+    }
+   ]
+  },
+  "status": {
+   "phase": "Pending",
+   "conditions": [
+    {
+     "type": "PodScheduled",
+     "status": "True"
+    }
+   ],
+   "containerStatuses": [
+    {
+     "name": "portal",
+     "ready": false,
+     "restartCount": 0,
+     "state": {
+      "waiting": {
+       "reason": "ContainerCreating"
+      }
+     }
+    }
+   ]
+  }
+ },
+ {
+  "apiVersion": "v1",
+  "kind": "Event",
+  "metadata": {
+   "name": "vol-1.1",
+   "namespace": "pay",
+   "creationTimestamp": "2026-11-13T11:56:00Z"
+  },
+  "involvedObject": {
+   "kind": "Pod",
+   "name": "vol-1",
+   "uid": "pod-vol-1",
+   "namespace": "pay"
+  },
+  "type": "Warning",
+  "reason": "FailedAttachVolume",
+  "message": "Multi-Attach error for volume \"pvc-ab92\" Volume is already exclusively attached to one node and can't be attached to another",
+  "count": 3,
+  "lastTimestamp": "2026-11-13T11:58:00Z"
+ },
+ {
+  "apiVersion": "apps/v1",
+  "kind": "Deployment",
+  "metadata": {
+   "name": "ledger",
+   "namespace": "pay",
+   "uid": "dep-ledger",
+   "creationTimestamp": "2026-11-13T08:00:00Z",
+   "labels": {
+    "app": "ledger"
+   }
+  },
+  "spec": {
+   "replicas": 1,
+   "selector": {
+    "matchLabels": {
+     "app": "ledger"
+    }
+   },
+   "template": {
+    "metadata": {
+     "labels": {
+      "app": "ledger"
+     }
+    },
+    "spec": {
+     "containers": [
+      {
+       "name": "app",
+       "image": "registry.example/ledger:0.9"
+      }
+     ]
+    }
+   }
+  },
+  "status": {
+   "replicas": 1,
+   "readyReplicas": 0,
+   "availableReplicas": 0,
+   "updatedReplicas": 1
+  }
+ },
+ {
+  "apiVersion": "v1",
+  "kind": "Pod",
+  "metadata": {
+   "name": "noconfig-1",
+   "namespace": "pay",
+   "uid": "pod-noconfig-1",
+   "creationTimestamp": "2026-11-13T11:50:00Z",
+   "labels": {
+    "app": "notifier"
+   }
+  },
+  "spec": {
+   "nodeName": "node-a",
+   "containers": [
+    {
+     "name": "notifier",
+     "image": "registry.example/notifier:3",
+     "env": [
+      {
+       "name": "SMTP_HOST",
+       "valueFrom": {
+        "configMapKeyRef": {
+         "name": "notifier-settings",
+         "key": "smtp_host"
+        }
+       }
+      }
+     ]
+    }
+   ]
+  },
+  "status": {
+   "phase": "Pending",
+   "conditions": [
+    {
+     "type": "PodScheduled",
+     "status": "True"
+    }
+   ],
+   "containerStatuses": [
+    {
+     "name": "notifier",
+     "ready": false,
+     "restartCount": 0,
+     "state": {
+      "waiting": {
+       "reason": "CreateContainerConfigError",
+       "message": "configmap \"notifier-settings\" not found"
+      }
+     }
+    }
+   ]
+  }
+ },
+ {
+  "apiVersion": "v1",
+  "kind": "ConfigMap",
+  "metadata": {
+   "name": "notifier-config",
+   "namespace": "pay",
+   "creationTimestamp": "2026-11-10T00:00:00Z"
+  },
+  "data": {
+   "smtp_host": "smtp.internal.example"
+  }
+ }
+]

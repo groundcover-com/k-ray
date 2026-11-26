@@ -1,0 +1,11 @@
+{
+  "kubectl": [
+    "kubectl get deploy -A",
+    "kubectl rollout status deployment/storefront -n shop-web --timeout=5s",
+    "kubectl get pods -n shop-web -l app=storefront",
+    "kubectl describe pod -n shop-web $(kubectl get pods -n shop-web -l app=storefront --no-headers | awk '$2==\"0/1\"{print $1}')"
+  ],
+  "kray": [
+    "kray describe storefront"
+  ]
+}

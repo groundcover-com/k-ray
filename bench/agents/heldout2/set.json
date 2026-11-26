@@ -1,0 +1,12 @@
+{
+  "namespaces": ["h2-billing", "h2-catalog", "h2-batch", "h2-search", "h2-mailer", "h2-ring", "h2-orders", "h2-portal", "h2-render", "h2-media"],
+  "steps": [
+    {
+      "apply": ["01-billing.yaml", "02-catalog.yaml", "03-batch.yaml", "04-search.yaml", "05-mailer.yaml", "06-ring.yaml", "07-orders.yaml", "08-portal.yaml", "09-render.yaml", "10-media.yaml"],
+      "wait_rollout": ["deployment/catalog-web -n h2-catalog", "deployment/thumb-service -n h2-media"]
+    },
+    {
+      "apply": ["02b-catalog-v2.yaml", "10b-media-v2.yaml"]
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+{"symptom": "The importer in namespace bench-oom never finishes its work.",
+ "ready_when": "CrashLoopBackOff|OOMKilled",
+ "root_cause": "The importer container is OOM killed: it uses more memory than its 32Mi limit.",
+ "must": [["oom", "out of memory", "out-of-memory"], ["32 ?mi", "memory limit", "limit"]]}

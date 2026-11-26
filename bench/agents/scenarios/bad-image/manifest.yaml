@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Namespace
+metadata: {name: bench-image}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: billing, namespace: bench-image, labels: {app: billing}}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: billing}}
+  template:
+    metadata: {labels: {app: billing}}
+    spec:
+      containers:
+        - name: billing
+          image: registry.k8s.io/e2e-test-images/busybox:9.99.9
+          command: ["sleep", "3600"]

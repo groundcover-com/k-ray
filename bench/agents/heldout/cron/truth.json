@@ -1,0 +1,12 @@
+{
+  "namespace": "held-cron",
+  "symptom": "The dashboard keeps warning that the export is stale. The nightly export has not produced a new file for days and nobody got an error.",
+  "ready_cmd": "get cronjob -n held-cron",
+  "ready_when": "nightly-export\\s+0 0 31 2 \\*",
+  "root_cause": "The CronJob nightly-export has the schedule '0 0 31 2 *' (31 February), a date that never exists, so it never fires and no Job has ever run.",
+  "must": [
+    ["nightly-export"],
+    ["31 2|Feb(ruary)? 31|31st of Feb|0 0 31"],
+    ["never|impossible|does not exist|invalid|no job|not (run|fire|trigger)"]
+  ]
+}

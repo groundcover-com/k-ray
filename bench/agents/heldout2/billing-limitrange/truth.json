@@ -1,0 +1,8 @@
+{
+  "symptom": "The invoice-api deployment shows 0/2 ready and no pods ever appear. Nothing is crashing, there is simply nothing there.",
+  "namespace": "h2-billing",
+  "ready_cmd": "get events -n h2-billing",
+  "ready_when": "maximum memory usage per Container",
+  "root_cause": "A LimitRange (container-caps) caps container memory at 16Mi, and the invoice-api pod template sets a 32Mi limit, so the ReplicaSet cannot create pods.",
+  "must": [["limitrange|limit range|container-caps"],["16 ?mi|maximum|\\bmax\\b|exceed"]]
+}

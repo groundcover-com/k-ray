@@ -1,0 +1,60 @@
+# Exports completed ci runs as OpenTelemetry traces (and job logs) to
+# groundcover. Per-test spans come from the JUnit artifacts named
+# test-reports-<job> that ci uploads.
+#
+# This is CI telemetry about this repository's own runs. It is not part of
+# the kray binary, which makes no network calls except to the cluster.
+#
+# workflow_run always executes the default-branch copy of this file.
+# Runs from forks are skipped: their artifacts are untrusted input, and
+# this job holds repository secrets.
+name: Export CI traces
+
+on:
+  workflow_run:
+    workflows:
+      - ci
+    types: [completed]
+  workflow_dispatch:
+    inputs:
+      runId:
+        description: GitHub Actions run ID to export (replay a completed ci run)
+        required: true
+        type: string
+
+permissions:
+  actions: read
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  export-traces:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    env:
+      GC_ENDPOINT: ${{ secrets.GC_ENDPOINT }}
+      GC_INGESTION_KEY: ${{ secrets.GC_INGESTION_KEY }}
+    steps:
+      - name: Skip when groundcover OTLP secrets are unset
+        if: ${{ env.GC_ENDPOINT == '' || env.GC_INGESTION_KEY == '' }}
+        run: |
+          echo "GC_ENDPOINT / GC_INGESTION_KEY are not configured on this repository."
+          echo "Add an OTLP endpoint and ingestion key (Data Sources -> GitHub CI) to enable export."
+      - uses: groundcover-com/groundcover-github-action@2db9d42b776cc832cc00d48c176c75c6d56b8403 # v4.2.0
+        if: ${{ env.GC_ENDPOINT != '' && env.GC_INGESTION_KEY != '' }}
+        with:
+          # v4 action.yml has no default for githubToken.
+          githubToken: ${{ github.token }}
+          groundcoverEndpoint: ${{ env.GC_ENDPOINT }}
+          apiKey: ${{ env.GC_INGESTION_KEY }}
+          runId: ${{ github.event.workflow_run.id || inputs.runId }}
+          otelServiceName: kray-ci
+          workload: kray
+          env: ci
+          extraAttributes: "team=backend,repo=kray"
+          testResultsArtifactPrefix: "test-reports-"
+          exportLogs: true
+          commentOnPr: true

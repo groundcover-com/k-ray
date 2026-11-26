@@ -1,0 +1,8 @@
+{
+  "symptom": "token-signer keeps restarting, but its logs show no error: it says the signer daemon started.",
+  "namespace": "parts-signer",
+  "ready_cmd": "get pods -n parts-signer --no-headers",
+  "ready_when": "token-signer\\S+\\s+0/1\\s+(CrashLoopBackOff|Completed)\\s+[1-9]",
+  "root_cause": "The container's shell script starts the signer daemon in the background (sleep 3600 &) and then reaches its end, so the main process exits with code 0 (Completed). With restartPolicy Always the kubelet restarts it again and again (CrashLoopBackOff), although nothing fails.",
+  "must": [["exit(s|ed)?( with)?( code)? 0|code 0|completed|exits? (cleanly|normally|successfully)|terminat|finish"], ["background|daemon|foreground|detach|fork|long-running"]]
+}

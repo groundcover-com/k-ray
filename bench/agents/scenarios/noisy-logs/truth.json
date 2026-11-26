@@ -1,0 +1,4 @@
+{"symptom": "The payments deployment in namespace bench-logs keeps restarting.",
+ "ready_when": "CrashLoopBackOff|Error",
+ "root_cause": "The payment provider rejects the API key with HTTP 401, and the container exits with code 1.",
+ "must": [["401"], ["api.?key", "credential", "unauthori[sz]ed", "rejected", "authentication"]]}

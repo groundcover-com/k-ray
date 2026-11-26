@@ -1,0 +1,11 @@
+{
+  "namespace": "held-init",
+  "symptom": "The invoice-api pod never becomes ready and never serves traffic. It has been like that since the last deploy.",
+  "ready_when": "invoice-api-\\S+\\s+0/1\\s+Init:0/1",
+  "root_cause": "The init container wait-flags polls http://feature-flags:8080/ready/v2, which feature-flags does not serve (HTTP 404), so the init container retries for ever and the main container never starts.",
+  "must": [
+    ["init"],
+    ["feature-flags"],
+    ["/ready/v2|404|not found"]
+  ]
+}

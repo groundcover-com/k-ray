@@ -1,0 +1,8 @@
+{
+  "symptom": "The search-gateway pods are stuck and never start. They show a configuration error rather than a crash.",
+  "namespace": "h2-search",
+  "ready_cmd": "get pods -n h2-search --no-headers",
+  "ready_when": "search-gateway\\S+\\s+0/1\\s+CreateContainerConfigError",
+  "root_cause": "The pod env references key UPSTREAM_URL in ConfigMap gateway-settings. The ConfigMap exists, but its key is lowercase upstream_url.",
+  "must": [["upstream_url"],["gateway-settings|configmap"],["key|not found|couldn.t find|missing|case|lowercase|mismatch"]]
+}

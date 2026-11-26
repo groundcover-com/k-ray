@@ -1,0 +1,94 @@
+apiVersion: v1
+kind: Namespace
+metadata: {name: parts-cache}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: redis, namespace: parts-cache}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: redis}}
+  template:
+    metadata: {labels: {app: redis}}
+    spec:
+      containers:
+        - name: redis
+          image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+          command: ["sh", "-c"]
+          args:
+            - |
+              i=0; while true; do i=$((i+1)); echo "level=info msg=\"keyspace ok\" n=$i"; sleep 20; done
+          ports:
+            - {name: redis, containerPort: 6379}
+          resources: {requests: {cpu: 1m, memory: 4Mi}, limits: {memory: 16Mi}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: redis, namespace: parts-cache}
+spec:
+  selector: {app: redis}
+  ports:
+    - {name: redis, port: 6379, targetPort: redis}
+---
+apiVersion: v1
+kind: Namespace
+metadata: {name: parts-quote}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: quote-api, namespace: parts-quote}
+spec:
+  replicas: 2
+  selector: {matchLabels: {app: quote-api}}
+  template:
+    metadata: {labels: {app: quote-api}}
+    spec:
+      containers:
+        - name: quote-api
+          image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+          command: ["sh", "-c"]
+          args:
+            - |
+              echo "level=info msg=\"quote-api starting\" version=1.8.2"
+              pw=$(echo WGVubFBuYW5lbENqSVI2bSA4clRvYVJBVTUxektoQ0JpIER2ZXIwVkx3aWFYVWJoTUQgd04wVjdQODZreE9XOVdRVA== | base64 -d | tr 'A-Za-z' 'N-ZA-Mn-za-m')
+              printf '{"host":"%s","port":%s,"user":"quote","password":"%s","tls":false}' "$CACHE_HOST" "$CACHE_PORT" "$pw" > /tmp/cache-client.json
+              echo "{\"level\":\"info\",\"msg\":\"pricing client configured\",\"api key\":\"$(echo WGVubFBuYW5lbE5jdlhybEU5ZzBlQ0ZsbDc3TXZqWHF4YUkzUHhrOQ== | base64 -d | tr 'A-Za-z' 'N-ZA-Mn-za-m')\"}"
+              echo "level=info msg=\"cache client configured\" host=$CACHE_HOST port=$CACHE_PORT"
+              echo "level=info msg=\"serving quotes\" addr=:8080"
+              sleep 3600
+          env:
+            - {name: CACHE_HOST, value: redis}
+            - {name: CACHE_PORT, value: "6379"}
+          readinessProbe:
+            exec:
+              command:
+                - sh
+                - -c
+                - |
+                  nslookup "$CACHE_HOST" >/dev/null 2>&1 && exit 0
+                  printf '{"status":"degraded","checks":[{"name":"cfg","status":"ok"},{"name":"disk","status":"ok"},{"name":"mq","status":"ok"},{"name":"cache","status":"fail","error":"lookup %s: no such host","client":' "$CACHE_HOST"
+                  cat /tmp/cache-client.json
+                  printf '}]}'
+                  exit 1
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources: {requests: {cpu: 1m, memory: 4Mi}, limits: {memory: 16Mi}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: quote-web, namespace: parts-quote}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: quote-web}}
+  template:
+    metadata: {labels: {app: quote-web}}
+    spec:
+      containers:
+        - name: quote-web
+          image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+          command: ["sh", "-c"]
+          args:
+            - |
+              i=0; while true; do i=$((i+1)); echo "level=info msg=\"page served\" n=$i"; sleep 20; done
+          resources: {requests: {cpu: 1m, memory: 4Mi}, limits: {memory: 16Mi}}

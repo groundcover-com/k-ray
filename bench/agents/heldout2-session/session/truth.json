@@ -1,0 +1,128 @@
+{
+  "symptom": "The invoice-api deployment shows 0/2 ready and no pods ever appear. Nothing is crashing, there is simply nothing there. What is the cause?",
+  "namespace": "h2-billing",
+  "root_cause": "ten separate faults, one per question",
+  "must": [
+    [
+      "limitrange|limit range|container-caps"
+    ],
+    [
+      "16 ?mi|maximum|\\bmax\\b|exceed"
+    ]
+  ],
+  "conversation": [
+    {
+      "ask": "The invoice-api deployment shows 0/2 ready and no pods ever appear. Nothing is crashing, there is simply nothing there. What is the cause?",
+      "must": [
+        [
+          "limitrange|limit range|container-caps"
+        ],
+        [
+          "16 ?mi|maximum|\\bmax\\b|exceed"
+        ]
+      ]
+    },
+    {
+      "ask": "We shipped catalog-web v1.5.0 an hour ago, but the running pods still report v1.4.2. Why is the new version not live? What is the cause?",
+      "must": [
+        [
+          "paused|pause"
+        ],
+        [
+          "rollout|roll out|rolled|resume|replicaset|new pods"
+        ]
+      ]
+    },
+    {
+      "ask": "stock-sync restarts all the time and never stays up. Each run prints one line and dies. What is the cause?",
+      "must": [
+        [
+          "permission denied|not executable|\\b126\\b|executable|exec bit"
+        ],
+        [
+          "configmap|sync-scripts|defaultmode|file mode|0644|mode|volume"
+        ]
+      ]
+    },
+    {
+      "ask": "The search-gateway pods are stuck and never start. They show a configuration error rather than a crash. What is the cause?",
+      "must": [
+        [
+          "upstream_url"
+        ],
+        [
+          "gateway-settings|configmap"
+        ],
+        [
+          "key|not found|couldn.t find|missing|case|lowercase|mismatch"
+        ]
+      ]
+    },
+    {
+      "ask": "smtp-relay keeps restarting and I cannot keep it up. The logs say very little. What is the cause?",
+      "must": [
+        [
+          "read-only|readonly|read only|readonlyrootfilesystem"
+        ],
+        [
+          "smtp-relay\\.lock|lock|root filesystem|rootfs|/etc|securitycontext"
+        ]
+      ]
+    },
+    {
+      "ask": "Our ring cache cluster has 3 pods and all are Running, but every node says it cannot find its peers by name. What is the cause?",
+      "must": [
+        [
+          "servicename|service name|ring-hs|subdomain"
+        ],
+        [
+          "ring-headless|headless|dns"
+        ]
+      ]
+    },
+    {
+      "ask": "checkout-web fails every call to the ledger with an address error, although the ledger itself is up and healthy. What is the cause?",
+      "must": [
+        [
+          "externalname|external name"
+        ],
+        [
+          "ledger-store|ledger-stor|typo|misspell|nxdomain|does not exist|doesn.t exist|wrong|not resolve|unresolv"
+        ]
+      ]
+    },
+    {
+      "ask": "portal-api pods show 1/2 ready and the restart count keeps climbing, but the portal itself answers fine. What is the cause?",
+      "must": [
+        [
+          "log-shipper|sidecar"
+        ],
+        [
+          "access\\.log|app\\.log|no such file|wrong (file|path)|file name|filename"
+        ]
+      ]
+    },
+    {
+      "ask": "pdf-render never becomes Ready and restarts again and again. Its logs only ever say it is warming up. What is the cause?",
+      "must": [
+        [
+          "startup ?probe"
+        ],
+        [
+          "threshold|15 ?s|too short|slow|45|window|period|warm"
+        ]
+      ]
+    },
+    {
+      "ask": "I rolled out thumb-service v2, but the old pods keep serving and the rollout never finishes. What is the cause?",
+      "must": [
+        [
+          "quota|compute-budget|resourcequota"
+        ],
+        [
+          "requests\\.memory|memory|12 ?mi"
+        ]
+      ]
+    }
+  ]
+}

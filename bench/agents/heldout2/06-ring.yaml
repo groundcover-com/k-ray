@@ -1,0 +1,53 @@
+apiVersion: v1
+kind: Namespace
+metadata: {name: h2-ring}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: ring-headless, namespace: h2-ring}
+spec:
+  clusterIP: None
+  selector: {app: ring}
+  ports:
+    - {name: peer, port: 7000}
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata: {name: ring, namespace: h2-ring}
+spec:
+  replicas: 3
+  serviceName: ring-hs
+  podManagementPolicy: Parallel
+  selector: {matchLabels: {app: ring}}
+  template:
+    metadata: {labels: {app: ring}}
+    spec:
+      containers:
+        - name: ring
+          image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+          command: ["sh", "-c"]
+          args:
+            - |
+              while true; do
+                if out=$(wget -T 2 -q -O /dev/null http://ring-0.ring-headless:7000/ 2>&1); then echo "level=info msg=\"peer ok\" peer=ring-0"; else echo "level=warn msg=\"peer check failed\" peer=ring-0.ring-headless err=\"$out\""; fi
+                sleep 20
+              done
+          resources: {requests: {cpu: 1m, memory: 4Mi}, limits: {memory: 16Mi}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: ring-admin, namespace: h2-ring}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: ring-admin}}
+  template:
+    metadata: {labels: {app: ring-admin}}
+    spec:
+      containers:
+        - name: ring-admin
+          image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+          command: ["sh", "-c"]
+          args:
+            - |
+              i=0; while true; do i=$((i+1)); echo "level=info msg=\"admin poll\" n=$i"; sleep 20; done
+          resources: {requests: {cpu: 1m, memory: 4Mi}, limits: {memory: 16Mi}}

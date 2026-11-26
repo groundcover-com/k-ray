@@ -1,0 +1,89 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata: {name: held-netpol}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: ledger-web, namespace: held-netpol}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: ledger-web}}
+  template:
+    metadata:
+      labels: {app: ledger-web, role: frontend}
+    spec:
+      containers:
+      - name: ledger-web
+        image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+        command: ["sh", "-c"]
+        args:
+        - |
+          while true; do wget -q -T 3 -O /dev/null http://ledger-api:8080/ && echo "$(date -u +%FT%TZ) level=info msg=\"ledger summary ok\""; sleep 30; done
+        resources: {requests: {cpu: 1m, memory: 4Mi}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: ledger-api, namespace: held-netpol}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: ledger-api}}
+  template:
+    metadata: {labels: {app: ledger-api}}
+    spec:
+      containers:
+      - name: ledger-api
+        image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+        command: ["sh", "-c"]
+        args:
+        - |
+          mkdir -p /www; echo '{"balance":"ok"}' > /www/index.html
+          echo "ledger-api listening on :8080"
+          exec httpd -f -vv -p 8080 -h /www
+        ports: [{containerPort: 8080}]
+        resources: {requests: {cpu: 1m, memory: 4Mi}}
+---
+apiVersion: v1
+kind: Service
+metadata: {name: ledger-api, namespace: held-netpol}
+spec:
+  selector: {app: ledger-api}
+  ports: [{port: 8080, targetPort: 8080}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: statement-worker, namespace: held-netpol}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: statement-worker}}
+  template:
+    metadata: {labels: {app: statement-worker, role: batch}}
+    spec:
+      containers:
+      - name: statement-worker
+        image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+        env:
+        - {name: STATEMENT_API_TOKEN, value: sk_live_KrayCanaryNetpol4f8a2c}
+        command: ["sh", "-c"]
+        args:
+        - |
+          while true; do
+            if wget -q -T 3 -O /dev/null http://ledger-api:8080/; then
+              echo "$(date -u +%FT%TZ) level=info msg=\"fetched ledger summary\""
+            else
+              echo "$(date -u +%FT%TZ) level=error msg=\"ledger-api request timed out after 3s, statement not generated\""
+            fi
+            sleep 15
+          done
+        resources: {requests: {cpu: 1m, memory: 4Mi}}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: {name: ledger-api-ingress, namespace: held-netpol}
+spec:
+  podSelector: {matchLabels: {app: ledger-api}}
+  policyTypes: [Ingress]
+  ingress:
+  - from:
+    - podSelector: {matchLabels: {role: frontend}}
+    ports: [{protocol: TCP, port: 8080}]

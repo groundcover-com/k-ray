@@ -1,0 +1,4 @@
+{"symptom": "The catalog service in namespace bench-probe gets no traffic. Its pods are running.",
+ "ready_when": "0/1 +Running",
+ "root_cause": "The readiness probe requests /ready, which returns HTTP 404 (the app serves /healthz), so the pods never become ready.",
+ "must": [["readiness"], ["404", "/ready"]]}

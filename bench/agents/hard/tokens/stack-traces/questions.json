@@ -1,0 +1,22 @@
+{
+  "kubectl": [
+    "kubectl get pods -A | grep -i checkout",
+    "kubectl logs -n shop-orders -l app=checkout --tail=500 --max-log-requests=20 | grep -E 'Caused by|Exception' | sort | uniq -c | sort -rn | head -10",
+    "kubectl logs -n shop-orders -l app=checkout --tail=500 --max-log-requests=20 --prefix | grep 'Caused by: java.net.ConnectException' | cut -d/ -f2 | sort | uniq -c"
+  ],
+  "kray": [
+    "kray get pods -A | grep -i checkout",
+    "kray logs -l app=checkout -n shop-orders"
+  ],
+  "variants": {
+    "kubectl-no-grep": [
+      "kubectl get pods -A | grep -i checkout",
+      "kubectl logs -n shop-orders -l app=checkout --tail=100 --max-log-requests=20 --prefix"
+    ],
+    "kray-triage": [
+      "kray list pods -n shop-orders -l app=checkout",
+      "for i in $(seq 0 19); do kray logs checkout-$i -n shop-orders --tail 500 | grep -q '^errors:' && echo \"checkout-$i has errors\"; done",
+      "kray logs checkout-3 -n shop-orders --tail 500"
+    ]
+  }
+}

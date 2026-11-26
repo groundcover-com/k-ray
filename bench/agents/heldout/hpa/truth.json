@@ -1,0 +1,12 @@
+{
+  "namespace": "held-hpa",
+  "symptom": "checkout-api is slow during traffic spikes and should scale out, but it stays at one replica no matter the load.",
+  "ready_cmd": "get hpa -n held-hpa",
+  "ready_when": "<unknown>",
+  "root_cause": "The HorizontalPodAutoscaler checkout-api cannot compute CPU utilization: the log-shipper container has no CPU request, so the metric is missing (FailedGetResourceMetric) and it never scales.",
+  "must": [
+    ["HPA|HorizontalPodAutoscaler|autoscaler"],
+    ["log-shipper"],
+    ["cpu request|request for cpu|missing request|no cpu request|without a cpu|cpu.{0,30}(request|unknown)"]
+  ]
+}

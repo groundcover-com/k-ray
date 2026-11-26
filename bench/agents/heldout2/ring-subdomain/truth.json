@@ -1,0 +1,8 @@
+{
+  "symptom": "Our ring cache cluster has 3 pods and all are Running, but every node says it cannot find its peers by name.",
+  "namespace": "h2-ring",
+  "ready_cmd": "logs ring-0 -n h2-ring",
+  "ready_when": "bad address",
+  "root_cause": "The StatefulSet serviceName is ring-hs, but the headless Service is called ring-headless, so no per-pod DNS records exist for ring-N.ring-headless.",
+  "must": [["servicename|service name|ring-hs|subdomain"],["ring-headless|headless|dns"]]
+}

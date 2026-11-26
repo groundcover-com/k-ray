@@ -1,0 +1,9 @@
+{
+  "namespaces": ["parts-signer", "parts-cache", "parts-quote", "parts-report"],
+  "steps": [
+    {
+      "apply": ["01-signer.yaml", "02-quote.yaml", "03-report.yaml"],
+      "wait_rollout": ["deployment/redis -n parts-cache"]
+    }
+  ]
+}

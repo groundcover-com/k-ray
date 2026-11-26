@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: Namespace
+metadata: {name: bench-config}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: notifier, namespace: bench-config, labels: {app: notifier}}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: notifier}}
+  template:
+    metadata: {labels: {app: notifier}}
+    spec:
+      containers:
+        - name: notifier
+          image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+          command: ["sleep", "3600"]
+          env:
+            - name: SMTP_HOST
+              valueFrom: {configMapKeyRef: {name: notifier-settings, key: smtp_host}}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: {name: notifier-config, namespace: bench-config}
+data: {smtp_host: smtp.internal.example}

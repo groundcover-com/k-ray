@@ -1,0 +1,8 @@
+{
+  "symptom": "quote-api pods run but never become Ready. Nothing crashes.",
+  "namespace": "parts-quote",
+  "ready_cmd": "get events -n parts-quote",
+  "ready_when": "Readiness probe failed",
+  "root_cause": "quote-api sets CACHE_HOST to the short name redis, but the redis Service is in namespace parts-cache, not parts-quote. A short name resolves only in the pod's own namespace, so the readiness check's lookup of redis fails (no such host) and the pods stay not ready. It needs redis.parts-cache (or the full name).",
+  "must": [["parts-cache|other namespace|another namespace|different namespace|wrong namespace|cross-namespace"], ["cache_host|short name|redis"]]
+}

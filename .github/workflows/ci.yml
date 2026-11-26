@@ -1,0 +1,217 @@
+name: ci
+
+# Jobs: lint, test, build, then the kind job. Job names
+# are the required checks in .github/rulesets/main.json.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: Formatting
+        run: make fmt
+      - name: Vet
+        run: make vet
+      - name: Staticcheck
+        run: make staticcheck
+      - name: Known vulnerabilities
+        run: make vulncheck
+      - name: Module files are tidy
+        run: make tidy-check
+      - name: Shellcheck
+        run: make shellcheck
+      - name: GitHub Actions lint
+        run: make actionlint
+
+  test:
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      # Unit tests with the race detector, as JUnit for the trace export.
+      # internal/guard runs here: it fails the build when a rule is broken.
+      - run: make test-junit
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: test-reports-test
+          path: reports/*-junit.xml
+          if-no-files-found: warn
+          overwrite: true
+
+  build:
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+      - name: Host build
+        run: make build
+      - name: Every release platform (CGO off)
+        run: make dist
+      - name: Summary
+        run: |
+          {
+            echo "### build"
+            echo
+            echo '```'
+            cat dist/SHA256SUMS
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # The safety acceptance test: a kind cluster with API server audit logging
+  # and metrics-server, the canary fixture, and the canary harness against
+  # the server (test/integration), with a cluster-admin identity and with
+  # the init identity. It passes only if no canary appears in any output or
+  # audit line, and the API server audit log shows only get and list from
+  # the server's identity. test/e2e (in the test job) runs the same harness
+  # against a fake API server.
+  #
+  # It runs on three Kubernetes minors: the newest that kind v0.33.0 ships
+  # (its default node image), one middle, and the oldest that upstream still
+  # supports (1.34 reached end of life on 2026-10-27). The node images and
+  # digests are the ones in the kind v0.33.0 release notes. kubectl matches
+  # each minor, so the benchmark stays inside the kubectl version skew.
+  # Update the list when kind ships a new minor or a minor reaches end of
+  # life; scripts/kind.sh holds the default (newest) image.
+  integration-k8s:
+    name: integration ${{ matrix.k8s }}
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - k8s: "1.37"
+            node_image: kindest/node:v1.37.0@sha256:a1ed56cfb0e7b93589bdf97c8cd566405a265939e3620fc4f5de89adff580ae5
+            kubectl: v1.37.2
+          - k8s: "1.36"
+            node_image: kindest/node:v1.36.4@sha256:099e049362a1526b2db71494e1947aae99bd16290d7c895f2b7ea312e3cbfaed
+            kubectl: v1.36.4
+          - k8s: "1.35"
+            node_image: kindest/node:v1.35.8@sha256:07b2536e30b803ed61d1677a79df6115f798ce64c80f9e22f6ed45afd09323c0
+            kubectl: v1.35.8
+    env:
+      KIND_NODE_IMAGE: ${{ matrix.node_image }} # read by scripts/kind.sh up
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      - name: Install kind and kubectl
+        uses: helm/kind-action@ea822c7bf1874f08e5a491df991c228edffc3376 # v1.15.2
+        with:
+          install_only: true
+          version: v0.33.0
+          kubectl_version: ${{ matrix.kubectl }}
+
+      - name: Host packages
+        run: |
+          missing=()
+          command -v conntrack >/dev/null 2>&1 || missing+=(conntrack)
+          command -v iptables >/dev/null 2>&1 || missing+=(iptables)
+          command -v strace >/dev/null 2>&1 || missing+=(strace)
+          if ((${#missing[@]})); then
+            ./scripts/apt-install.sh "${missing[@]}"
+          fi
+          kind version
+          kubectl version --client
+          docker version --format '{{.Server.Version}}'
+
+      # Default GHA bash has no pipefail; `cmd | tee` would hide a failure.
+      - name: Canary harness
+        env:
+          KEEP_FIXTURE: "1" # the benchmark below measures the fixture workload
+        run: |
+          set -o pipefail
+          mkdir -p artifacts reports
+          make kind-up 2>&1 | tee artifacts/kind-up.log
+          go run gotest.tools/gotestsum@v1.13.0 --junitfile reports/integration-junit.xml -- \
+            -tags integration -count=1 -timeout 30m ./test/integration/... 2>&1 | tee artifacts/integration.log
+
+      - name: Output size against kubectl
+        env:
+          K8S: ${{ matrix.k8s }}
+        run: |
+          set -o pipefail
+          make bench 2>&1 | tee artifacts/bench.log
+          cp bench/RESULTS.md artifacts/bench-RESULTS.md
+          {
+            echo "## Kubernetes ${K8S}"
+            echo
+            cat bench/RESULTS.md
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Cluster state and audit logs
+        if: always()
+        run: |
+          kubectl --kubeconfig test/integration/out/kubeconfig get pods -A -o wide | tee artifacts/pods.txt || true
+          cp -r test/integration/out/. artifacts/ 2>/dev/null || true
+
+      - name: Kind down
+        if: always()
+        run: make kind-down
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: test-reports-integration-${{ matrix.k8s }}
+          path: reports/*-junit.xml
+          if-no-files-found: warn
+          overwrite: true
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: always()
+        with:
+          name: integration-artifacts-${{ matrix.k8s }}
+          path: artifacts/
+
+  # The required check. The ruleset (.github/rulesets/main.json) requires a
+  # check named exactly "integration", and a matrix names its checks
+  # "integration 1.37" and so on. This job passes only when every leg passed:
+  # a failed, cancelled or skipped leg fails it. always() makes it run (and
+  # report) when a leg fails, so the check is never left as skipped.
+  integration:
+    needs: integration-k8s
+    if: always()
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 5
+    steps:
+      - name: Every Kubernetes version passed
+        env:
+          RESULT: ${{ needs.integration-k8s.result }}
+        run: |
+          if [ "${RESULT}" != success ]; then
+            echo "::error::integration on at least one Kubernetes version: ${RESULT}"
+            exit 1
+          fi
+          echo "integration passed on every Kubernetes version"

@@ -1,0 +1,8 @@
+{
+  "symptom": "checkout-web fails every call to the ledger with an address error, although the ledger itself is up and healthy.",
+  "namespace": "h2-orders",
+  "ready_cmd": "logs deploy/checkout-web -n h2-orders",
+  "ready_when": "bad address",
+  "root_cause": "Service ledger-db is type ExternalName and points to ledger-stor.h2-orders.svc.cluster.local, a misspelled name (the real Service is ledger-store), so it does not resolve.",
+  "must": [["externalname|external name"],["ledger-store|ledger-stor|typo|misspell|nxdomain|does not exist|doesn.t exist|wrong|not resolve|unresolv"]]
+}

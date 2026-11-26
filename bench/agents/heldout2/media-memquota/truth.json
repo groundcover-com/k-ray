@@ -1,0 +1,8 @@
+{
+  "symptom": "I rolled out thumb-service v2, but the old pods keep serving and the rollout never finishes.",
+  "namespace": "h2-media",
+  "ready_cmd": "get events -n h2-media",
+  "ready_when": "exceeded quota",
+  "root_cause": "ResourceQuota compute-budget caps requests.memory at 12Mi, which is already used by the 3 running pods, so the surge pod of the rolling update cannot be created.",
+  "must": [["quota|compute-budget|resourcequota"],["requests\\.memory|memory|12 ?mi"]]
+}

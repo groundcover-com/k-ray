@@ -1,0 +1,6 @@
+{"symptom": "The storefront team shipped a new release, but customers still see the old version. The rollout never finishes.",
+ "namespace": "shop-web",
+ "ready_cmd": "get pods -n shop-web --no-headers",
+ "ready_when": "storefront-\\S+\\s+0/1\\s+Running",
+ "root_cause": "Revision 2 changed the readiness probe path to /api/health, but the app serves /healthz. The probe gets HTTP 404, the new pod never becomes ready, and the old ReplicaSet keeps serving.",
+ "must": [["readiness"], ["/api/health"], ["404", "/healthz"]]}

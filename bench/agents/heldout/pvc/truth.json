@@ -1,0 +1,12 @@
+{
+  "namespace": "held-pvc",
+  "symptom": "The payments-ledger service has no running pod. Nothing is crashing and nobody changed the code; it just never starts.",
+  "ready_cmd": "get pvc -n held-pvc",
+  "ready_when": "ledger-data\\s+Pending",
+  "root_cause": "The PersistentVolumeClaim ledger-data asks for StorageClass fast-ssd, which does not exist in the cluster, so the claim stays Pending and the pod cannot be scheduled.",
+  "must": [
+    ["fast-ssd"],
+    ["ledger-data|PersistentVolumeClaim|PVC|claim"],
+    ["not found|does not exist|no such|missing|no storage ?class|Pending|unbound"]
+  ]
+}

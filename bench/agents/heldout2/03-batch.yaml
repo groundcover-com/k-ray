@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: Namespace
+metadata: {name: h2-batch}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: {name: sync-scripts, namespace: h2-batch}
+data:
+  sync.sh: |
+    #!/bin/sh
+    echo "syncing stock levels"
+    sleep 3600
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: stock-sync, namespace: h2-batch}
+spec:
+  replicas: 2
+  selector: {matchLabels: {app: stock-sync}}
+  template:
+    metadata: {labels: {app: stock-sync}}
+    spec:
+      containers:
+        - name: stock-sync
+          image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+          command: ["sh", "-c"]
+          args:
+            - |
+              echo "starting stock sync"; /scripts/sync.sh || exit $?
+          volumeMounts:
+            - {name: scripts, mountPath: /scripts}
+          resources: {requests: {cpu: 1m, memory: 4Mi}, limits: {memory: 16Mi}}
+      volumes:
+        - name: scripts
+          configMap: {name: sync-scripts}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: export-index, namespace: h2-batch}
+spec:
+  replicas: 2
+  selector: {matchLabels: {app: export-index}}
+  template:
+    metadata: {labels: {app: export-index}}
+    spec:
+      containers:
+        - name: export-index
+          image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+          command: ["sh", "-c", "i=0; while true; do i=$((i+1)); echo \"level=info msg=\\\"index exported\\\" n=$i\"; sleep 20; done", "exporter"]
+          args: ["--git-token=ghp_KrayCanaryGhToka1B2c3D4e5F6g7H8i9J0k", "--branch=main"]
+          resources: {requests: {cpu: 1m, memory: 4Mi}, limits: {memory: 16Mi}}

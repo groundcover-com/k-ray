@@ -1,0 +1,54 @@
+apiVersion: v1
+kind: Namespace
+metadata: {name: h2-render}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pdf-render
+  namespace: h2-render
+  annotations:
+    backup.example.com/restic-password: KrayCanaryRestic9xQ2vL7mZp4Tw8Hd
+spec:
+  replicas: 2
+  selector: {matchLabels: {app: pdf-render}}
+  template:
+    metadata:
+      labels: {app: pdf-render}
+      annotations:
+        backup.example.com/restic-password: KrayCanaryRestic9xQ2vL7mZp4Tw8Hd
+    spec:
+      containers:
+        - name: pdf-render
+          image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+          command: ["sh", "-c"]
+          args:
+            - |
+              echo "level=info msg=\"warming font cache\""
+              i=0; while [ $i -lt 9 ]; do i=$((i+1)); echo "level=info msg=\"font cache step\" step=$i/9"; sleep 5; done
+              touch /tmp/ready
+              echo "level=info msg=\"ready for jobs\""
+              while true; do echo "level=info msg=\"render done\""; sleep 20; done
+          startupProbe:
+            exec: {command: ["test", "-f", "/tmp/ready"]}
+            periodSeconds: 5
+            failureThreshold: 3
+          resources: {requests: {cpu: 1m, memory: 4Mi}, limits: {memory: 16Mi}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: render-queue, namespace: h2-render}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: render-queue}}
+  template:
+    metadata: {labels: {app: render-queue}}
+    spec:
+      containers:
+        - name: render-queue
+          image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+          command: ["sh", "-c"]
+          args:
+            - |
+              i=0; while true; do i=$((i+1)); echo "level=info msg=\"job queued\" n=$i"; sleep 20; done
+          resources: {requests: {cpu: 1m, memory: 4Mi}, limits: {memory: 16Mi}}

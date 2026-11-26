@@ -1,0 +1,4 @@
+{"symptom": "The analytics deployment in namespace bench-sched has no running pod.",
+ "ready_when": "Pending",
+ "root_cause": "The pod requests 64Gi of memory, more than any node has, so the scheduler cannot place it.",
+ "must": [["memory"], ["64 ?gi", "65536 ?mi", "insufficient", "more than", "exceeds?", "too (much|large|big)", "cannot fit", "can't fit", "not enough"]]}

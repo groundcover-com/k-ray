@@ -1,0 +1,7 @@
+{
+  "namespaces": ["shop-web", "shop-orders", "shop-data", "shop-batch"],
+  "steps": [
+    {"apply": ["fixture.yaml"], "wait_rollout": ["statefulset/checkout -n shop-orders", "deployment/storefront -n shop-web"]},
+    {"apply": ["release-2.yaml"]}
+  ]
+}

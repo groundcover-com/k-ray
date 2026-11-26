@@ -1,0 +1,59 @@
+---
+apiVersion: v1
+kind: Namespace
+metadata: {name: held-cron}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: analytics-api, namespace: held-cron}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: analytics-api}}
+  template:
+    metadata:
+      labels: {app: analytics-api}
+    spec:
+      containers:
+      - name: analytics-api
+        image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+        command: ["sh", "-c"]
+        args:
+        - |
+          while true; do echo "$(date -u +%FT%TZ) level=info msg=\"query ok rows=300\""; sleep 30; done
+        resources: {requests: {cpu: 1m, memory: 4Mi}}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: dashboard, namespace: held-cron}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: dashboard}}
+  template:
+    metadata: {labels: {app: dashboard}}
+    spec:
+      containers:
+      - name: dashboard
+        image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+        command: ["sh", "-c"]
+        args:
+        - |
+          while true; do echo "$(date -u +%FT%TZ) level=warn msg=\"export is stale: newest file exports/2026-11-09.csv is older than 72h\""; sleep 30; done
+        resources: {requests: {cpu: 1m, memory: 4Mi}}
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata: {name: nightly-export, namespace: held-cron}
+spec:
+  schedule: "0 0 31 2 *"
+  successfulJobsHistoryLimit: 1
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+          - name: export
+            image: registry.k8s.io/e2e-test-images/busybox:1.36.1-1
+            command: ["sh", "-c", "echo exporting; sleep 2; echo done"]
+            resources: {requests: {cpu: 1m, memory: 4Mi}}

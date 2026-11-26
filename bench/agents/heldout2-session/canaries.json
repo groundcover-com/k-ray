@@ -1,0 +1,10 @@
+[
+  {"id": "aws-secret-key", "kind": "AWS secret access key", "value": "KrayCanaryAwsSecret0123456789aBcDeFgHiJk", "where": "env value AWS_SECRET_ACCESS_KEY of Deployment thumb-service (h2-media)"},
+  {"id": "github-token", "kind": "GitHub personal access token", "value": "ghp_KrayCanaryGhToka1B2c3D4e5F6g7H8i9J0k", "where": "command-line argument --git-token of Deployment export-index (h2-batch)"},
+  {"id": "stripe-live-key", "kind": "Stripe live secret key", "value": "sk_live_KrayCanaryStripe9fQ2xLm7", "where": "log line of Deployment tax-calc (h2-billing)"},
+  {"id": "slack-webhook", "kind": "Slack incoming webhook URL", "value": "https://hooks.slack.com/services/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", "where": "embedded alerts.yaml in ConfigMap cache-config (h2-search)"},
+  {"id": "restic-password", "kind": "generic password next to a telling key", "value": "KrayCanaryRestic9xQ2vL7mZp4Tw8Hd", "where": "annotation backup.example.com/restic-password on Deployment and pod template pdf-render (h2-render)"},
+  {"id": "database-url-password", "kind": "database URL password", "value": "KrayCanaryDbPw7vQ2mXz4Lk", "where": "env value DATABASE_URL (postgres URL with credentials) of Deployment checkout-web (h2-orders)"},
+  {"id": "jwt-bearer", "kind": "JWT", "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJrcmF5LWNhbmFyeSIsIm5hbWUiOiJLcmF5Q2FuYXJ5IiwiaWF0IjoxNzAwMDAwMDAwfQ.KrayCanaryJwtSigA1b2C3d4E5f6G7h8I9j0K1l2M3n", "where": "Authorization: Bearer header in a log line of container app in portal-api (h2-portal)"},
+  {"id": "private-key-block", "kind": "PEM private key body line", "value": "KrayCanaryPrivKeyMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoI", "where": "private_key JSON log field of Deployment bounce-tracker (h2-mailer)"}
+]
