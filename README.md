@@ -34,7 +34,7 @@ Paste this into Claude Code, Cursor, or Codex:
 Install kray for me and connect it to this agent. Follow the steps in
 https://raw.githubusercontent.com/groundcover-com/kray/main/docs/install.md
 Use my current kubeconfig context unless I name another one.
-Show me the manifests and ask me before you apply anything to the cluster.
+Don't create anything in the cluster.
 ```
 
 Then ask your agent: "Is anything broken in this cluster?"
