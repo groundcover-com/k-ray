@@ -1,6 +1,6 @@
 <h1 align="center">kray</h1>
 
-<p align="center"><strong>A read-only Kubernetes CLI for AI agents. Saves tokens. Secure by default.</strong></p>
+<p align="center"><strong>Read-only Kubernetes CLI for AI agents. 62% less to read. Nothing to leak.</strong></p>
 
 <p align="center">An open source project by <a href="https://www.groundcover.com/?utm_source=github&utm_medium=readme&utm_campaign=kray&utm_content=header">groundcover</a></p>
 
