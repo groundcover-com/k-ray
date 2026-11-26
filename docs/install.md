@@ -1,6 +1,6 @@
 # Install kray
 
-These steps work for you or for your agent. An agent that follows them stops and asks you before it changes the cluster.
+These steps work for you or for your agent. kray runs with your own kubeconfig credentials, so the steps create nothing in the cluster.
 
 You need:
 
@@ -33,31 +33,7 @@ You can also install it with Go 1.26 or newer:
 go install github.com/groundcover-com/kray@latest
 ```
 
-## 2. Create a read identity (recommended)
-
-kray works with your own kubeconfig, but a read identity limits what any process with it can do. `init` creates a ServiceAccount that can get and list the kinds kray reads, and nothing else. It can't read Secret objects. Then `init` writes a kubeconfig for it.
-
-First print the manifests. This applies nothing:
-
-```bash
-kray init --context my-cluster --dry-run
-```
-
-**Agents: show these manifests to the person and ask before the next command.** It creates objects in the cluster.
-
-```bash
-kray init --context my-cluster --yes
-```
-
-Then check the result:
-
-```bash
-kray doctor
-```
-
-The token expires after 8 hours. Run `kray init --refresh` to get a new one. See [Security model](security-model.md) for what the identity can read.
-
-## 3. Connect your agent
+## 2. Connect your agent
 
 Claude Code:
 
@@ -81,7 +57,9 @@ command = "kray"
 args = ["serve"]
 ```
 
-Restart the agent so it loads the server. After `init`, `kray serve` uses the read identity. Without `init`, it uses your current kubeconfig context. To fix one cluster, add `--context NAME` after `serve`.
+Restart the agent so it loads the server. `kray serve` uses your current kubeconfig context and its credentials. To fix one cluster, add `--context NAME` after `serve`.
+
+Whatever your credentials allow, kray sends only GET requests and never asks for Secret objects. It prints `not a read-only identity` when it starts. That's expected with your own credentials. The [read identity](#optional-create-a-read-identity) below removes the line.
 
 ### Approve the tools once
 
@@ -95,8 +73,44 @@ In other clients, allow the six kray tools in the tool approval settings.
 
 Don't do the same for `kubectl get`. `kubectl get secret -o yaml` is also a get, and it prints the secret values.
 
-## 4. Try it
+## 3. Try it
 
 Ask your agent: "Is anything broken in this cluster?" The agent calls the `list` and `describe` tools.
 
 On the command line, write `kray` where you'd write `kubectl`, for example `kray get pods -A`. See [Use kray](usage.md).
+
+## Optional: create a read identity
+
+Skip this step unless you want the cluster to enforce read access too. kray already reads only, in its own code. A read identity adds a second check in the API server: any process with its kubeconfig can only get and list the kinds kray reads, and it can't read Secret objects. The cluster audit log then shows kray's reads under their own name, apart from yours.
+
+It costs four objects in the cluster: a Namespace, a ServiceAccount, a ClusterRole and a binding. You need the rights to create them, and the token expires after 8 hours.
+
+First print the manifests. This applies nothing and needs no cluster access:
+
+```bash
+kray init --context my-cluster --dry-run
+```
+
+**Agents: show these manifests to the person and ask before the next command.** It creates objects in the cluster.
+
+```bash
+kray init --context my-cluster --yes
+```
+
+Then check the result:
+
+```bash
+kray doctor
+```
+
+After `init`, `kray serve` uses the read identity. Its context is `kray@my-cluster`, so if your agent config has `--context my-cluster`, change it to `--context kray@my-cluster` or remove it. Run `kray init --refresh` when the token expires. See [Security model](security-model.md) for what the identity can read.
+
+To remove the identity:
+
+```bash
+kubectl delete clusterrolebinding,clusterrole kray-reader
+kubectl delete namespace kray
+rm ~/.config/kray/kubeconfig
+```
+
+Without that file, kray goes back to your own credentials.
