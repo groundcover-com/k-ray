@@ -6,7 +6,7 @@ call logged, and output shaped for a model.
 
 Read [`docs/architecture.md`](docs/architecture.md) before you change code. It
 is the authoritative design, and it lists the numbered invariants (I-1, I-2,
-...). Open decisions are in [`docs/open-questions.md`](docs/open-questions.md).
+...).
 
 ## The rules that do not bend
 

@@ -1,6 +1,6 @@
-# Every job in .github/workflows uses this Blacksmith runner family. If the
-# repository goes public, pull requests from forks would run on these runners
-# too, so decide on outside pull requests first.
+# Every job in .github/workflows uses this Blacksmith runner family. A pull
+# request from an outside contributor runs on these runners only after a
+# maintainer approves it (a repository setting).
 self-hosted-runner:
   labels:
     - "blacksmith-*vcpu-ubuntu-2404"

@@ -70,7 +70,7 @@ These are load-bearing. Each one has a test named in §11.
   `/apis` or `/version`. The transport rejects dot segments, empty segments,
   encoded slashes, `;`, `\`, `%` after decoding, and non-ASCII. It rejects any
   path that has a segment equal to `proxy`, `exec`, `attach`, `portforward`
-  or `secrets` (case-insensitive). Decided 2026-11-13 (was OQ-1): a segment
+  or `secrets` (case-insensitive). It is a segment
   match, not a substring match, so `pods/kube-proxy-abc` is allowed and
   `nodes/n/proxy` is blocked.
 - **I-4 Known query parameters only.** Allowed keys: `labelSelector`,
@@ -97,7 +97,7 @@ These are load-bearing. Each one has a test named in §11.
 - **I-10 Audit every call, fail closed.** Each tool call writes exactly one
   JSON line before it returns, also when a tool panics (the runner recovers
   and returns an internal error). Argument names must match exactly, and
-  argument names and values are both redacted in the line. If the write fails, the call fails (decided, was OQ-7). The
+  argument names and values are both redacted in the line. If the write fails, the call fails. The
   line never holds result content.
 - **I-11 Fixed target.** The cluster context is fixed when the process
   starts. No tool argument selects a context, kubeconfig, server URL, user or
@@ -108,7 +108,10 @@ These are load-bearing. Each one has a test named in §11.
   `describe`, `logs`, `events`, `top`. `init` and `doctor` are CLI-only.
 - **I-14 No other network.** The only network peer is the API server in the
   kubeconfig. No telemetry, no update check, no LLM call. (A credential
-  plugin from the person's kubeconfig may run; see OQ-10.)
+  plugin from the person's kubeconfig may run. EKS, GKE and AKS contexts
+  often use one, and client-go starts it as a child process. The command
+  comes from the kubeconfig, never from agent input. With `kray init`, the
+  kubeconfig has a static token and no plugin.)
 - **I-15 References, not values.** `secretKeyRef`, `secretRef` and
   `imagePullSecrets` are shown by name. kray never resolves them.
 
@@ -256,7 +259,10 @@ Default allowlist (get and list):
 | Metrics | `metrics.k8s.io` pods and nodes (get, list) |
 
 Never: Secret, ServiceAccount token requests, TokenReview, CSR, any
-subresource except `pods/log`. RBAC kinds and ServiceAccount: OQ-6.
+subresource except `pods/log`. Role, ClusterRole, their bindings and
+ServiceAccount are not in the default list: they help to debug "forbidden"
+errors, but they also map the cluster's attack surface for whoever reads the
+output.
 
 Custom resources are opt-in in the config file:
 
@@ -845,7 +851,7 @@ passes:
    threshold tuned on a corpus). Known-safe shapes are skipped: image digests,
    container IDs, UIDs and pod-template hashes.
 
-Rules added after the security review of 2026-11-13:
+Edge cases the rules cover:
 
 - Separators never cross a line end, and `=` may have spaces around it, so
   `password = x` (INI, TOML) and a password that is the first child of a
@@ -862,7 +868,7 @@ Rules added after the security review of 2026-11-13:
   AWS ARNs.
 - Text is never cut inside a word, so a cut never leaves part of a secret.
 
-Rules added after the review of 2026-11-16 (the order of redaction and cut):
+The order of redaction and cut:
 
 - **Redaction runs before every cut.** A word cut is not enough: a quoted
   secret with spaces (`{"password":"correct horse ...`) loses its closing
@@ -934,7 +940,7 @@ MCP tools (I-13), and they live in `internal/setup` (I-5).
    applies them with server-side apply, field manager `kray-init`.
 4. Gets a short-lived token with the TokenRequest API
    (`serviceaccounts/kray-reader/token`, POST). Default lifetime 8 hours
-   (decided, was OQ-4). The API server can shorten it; kray prints the real expiry.
+   The API server can shorten it; kray prints the real expiry.
 5. Writes `~/.config/kray/kubeconfig` (0600): the cluster's server and CA
    from the source context, the token, and context `kray@<source-context>`.
    `kray serve` uses this file when it exists.

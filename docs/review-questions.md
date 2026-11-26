@@ -1,6 +1,6 @@
 # Review questions
 
-**These are the seven questions we want a Kubernetes engineer to answer about kray.** Each has the context you need, the file to read, and what the code does today, so you can answer without a meeting. Short answers are fine. "This is wrong, here's a case" is the most useful answer.
+**If you run Kubernetes, these seven questions are where your experience helps kray most.** Each has the context you need, the file to read, and what the code does today. Answer in a GitHub issue. Short answers are fine. "This is wrong, here's a case" is the most useful answer.
 
 Start with the [review guide](review-guide.md) if you haven't read it. Known gaps are in [known-limits.md](known-limits.md), and the cause rules are in [rules.md](rules.md).
 
