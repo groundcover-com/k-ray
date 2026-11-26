@@ -1,6 +1,6 @@
 # Review guide
 
-**This guide gets a Kubernetes engineer from zero to a useful review of kray.** It says what kray is, where each safety rule is enforced, which files to read in which order, how to run every test, and what an earlier internal review already found. The questions we want you to answer are in [review-questions.md](review-questions.md).
+**This guide gets a Kubernetes engineer from zero to a useful review of kray.** It says what kray is, where each safety rule is enforced, which files to read in which order, how to run every test, and what earlier reviews already found. The questions we want you to answer are in [review-questions.md](review-questions.md).
 
 ## What kray is
 
@@ -69,7 +69,7 @@ make harness TARGET="<mcp server command>"
 
 The harness plants canary secrets in the fixture, makes normal and hostile calls, and fails if any canary appears in output, if a request other than GET leaves the process, or if a normal call isn't useful. `test/harness/stub` is a deliberately unsafe server that must fail it (`TestHarnessFailsAnUnsafeServer` in `test/e2e`).
 
-## What an earlier internal review found and fixed
+## What earlier reviews found and fixed
 
 Please don't spend time on these again, but do tell us if a fix is incomplete.
 
