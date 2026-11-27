@@ -202,15 +202,26 @@ func controllerRefOf(refs []metav1.OwnerReference) *metav1.OwnerReference {
 }
 
 func workloadSelector(u *unstructured.Unstructured) string {
-	m, found, _ := unstructured.NestedMap(u.Object, "spec", "selector")
-	if !found {
-		return ""
-	}
-	sel, err := labelSelectorOf(m)
-	if err != nil || sel.Empty() {
+	sel, ok := workloadSelectorOf(u)
+	if !ok {
 		return ""
 	}
 	return sel.String()
+}
+
+// workloadSelectorOf is the pod selector of a workload. ok is false when it
+// has none, or none that can be read, or an empty one (which would match
+// every pod).
+func workloadSelectorOf(u *unstructured.Unstructured) (labels.Selector, bool) {
+	m, found, _ := unstructured.NestedMap(u.Object, "spec", "selector")
+	if !found {
+		return nil, false
+	}
+	sel, err := labelSelectorOf(m)
+	if err != nil || sel.Empty() {
+		return nil, false
+	}
+	return sel, true
 }
 
 // labelSelectorOf reads a Kubernetes label selector (matchLabels and

@@ -37,7 +37,14 @@ func (r *Runner) list(ctx context.Context, in ListInput, red *redact.Redactor) (
 
 	now := r.now()
 	use, ends := reads.wait(len(page.Items) > 0)
-	rows, counts := r.listRows(ctx, q.k.Kind(), q.ns, page.Items, now, use, ends)
+	// The pods of the workloads are read after the list, not next to it: an
+	// empty list needs no pods, and client-go logs a read that is stopped
+	// while its body comes in.
+	var pods listPods
+	if len(page.Items) > 0 && everyPodBadApplies(q.k.Kind()) {
+		pods = r.listWorkloadPods(ctx, q.ns)
+	}
+	rows, counts := r.listRows(ctx, q.k.Kind(), q.ns, page.Items, now, use, ends, pods)
 	out.title = r.listTitle(q.k, q.ns, q.sel)
 	out.summary = []string{listSummary(q.k, len(rows), page.More, counts)}
 	if len(rows) == 0 {

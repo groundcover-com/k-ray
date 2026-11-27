@@ -110,7 +110,7 @@ func (l *listReads) wait(haveItems bool) (map[string]map[string]containerUse, li
 
 // listRows inspects each object, adds the problems that need more than the
 // object to see, and sorts the rows worst first. counts is by state.
-func (r *Runner) listRows(ctx context.Context, kind, ns string, items []unstructured.Unstructured, now time.Time, use map[string]map[string]containerUse, ends listEndpoints) ([]shape.Row, map[shape.State]int) {
+func (r *Runner) listRows(ctx context.Context, kind, ns string, items []unstructured.Unstructured, now time.Time, use map[string]map[string]containerUse, ends listEndpoints, pods listPods) ([]shape.Row, map[shape.State]int) {
 	rows := make([]shape.Row, 0, len(items))
 	counts := map[shape.State]int{}
 	for i := range items {
@@ -119,6 +119,7 @@ func (r *Runner) listRows(ctx context.Context, kind, ns string, items []unstruct
 			r.listServiceProblems(ctx, ns, &row, &items[i], ends)
 		}
 		listUsageProblems(&row, &items[i], use)
+		listEveryPodBad(&row, &items[i], pods)
 		rows = append(rows, row)
 		counts[row.State]++
 	}
