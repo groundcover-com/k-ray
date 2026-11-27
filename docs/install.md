@@ -73,11 +73,31 @@ In other clients, allow the six kray tools in the tool approval settings.
 
 Don't do the same for `kubectl get`. `kubectl get secret -o yaml` is also a get, and it prints the secret values.
 
-## 3. Try it
+## 3. Take a first look
 
-Ask your agent: "Is anything broken in this cluster?" The agent calls the `list` and `describe` tools.
+**Agents: end the install with a first look at the cluster, and show the person what you find.** The kray tools load only after the agent restarts, so use the command line now. Both commands only read. Add `--context NAME` if the person named a context.
 
-On the command line, write `kray` where you'd write `kubectl`, for example `kray get pods -A`. See [Use kray](usage.md).
+1. Get the state of every pod. If the answer says `forbidden`, run it again without `-A`.
+
+   ```bash
+   kray get pods -A
+   ```
+
+2. Pick the most serious problem in a workload that still runs, not a Job that ended days ago. Describe it by name:
+
+   ```bash
+   kray describe NAME
+   ```
+
+3. Tell the person, in a few short lines:
+   - How many pods have a problem, and the cause of each. Group the pods that have the same cause.
+   - The likely cause of the problem you described, and the evidence for it.
+   - If a result names secrets or shows `redactions:`, that kray gave you their names only, never their values.
+   - If nothing is broken, say so, with the count of healthy pods.
+
+4. Don't fix anything. Tell the person to restart the agent so that it loads the kray tools, and suggest one question about a problem you found, for example "Why is checkout failing?".
+
+After the restart, your agent calls the kray tools by itself when you ask about the cluster. On the command line, write `kray` where you'd write `kubectl`, for example `kray get pods -A`. See [Use kray](usage.md).
 
 ## Optional: create a read identity
 

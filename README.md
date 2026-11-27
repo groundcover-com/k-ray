@@ -34,10 +34,11 @@ Paste this into Claude Code, Cursor, or Codex:
 Install kray for me and connect it to this agent. Follow the steps in
 https://raw.githubusercontent.com/groundcover-com/kray/main/docs/install.md
 Use my current kubeconfig context unless I name another one.
-Don't create anything in the cluster.
+Don't create anything in the cluster. When it works, show me what
+kray finds in my cluster.
 ```
 
-Then ask your agent: "Is anything broken in this cluster?"
+The agent ends with a first look at your cluster: what's broken, and the likely cause of each problem. After you restart the agent, ask it about anything it found, for example "Why is checkout failing?"
 
 On the command line, write `kray` where you'd write `kubectl`, for example `kray get pods -A` or `kray logs web-1 --previous`. To install by hand, see [Install kray](docs/install.md).
 
