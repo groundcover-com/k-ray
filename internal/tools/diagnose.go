@@ -319,7 +319,10 @@ type workloadPods struct {
 	worstPod *unstructured.Unstructured
 	pods     []unstructured.Unstructured // the pods that were read, for the comparison of siblings
 	unread   bool                        // the pod list could not be read: summary says so, and nothing depends on the pods
-	diagnose podDiagnosis
+	// everyPodBad is true when the workload status looks healthy and every
+	// pod has a problem: the workload is a warning (see everyPodBad).
+	everyPodBad bool
+	diagnose    podDiagnosis
 }
 
 // diagnoseWorkload reads a workload's pods and diagnoses the worst one.
@@ -371,6 +374,9 @@ func (r *Runner) diagnoseWorkload(ctx context.Context, u *unstructured.Unstructu
 	}
 	w.pods = page.Items
 	w.summary = fmt.Sprintf("pods (selector %s): %d, %d with problems", sel, len(page.Items), bad)
+	if st == shape.Healthy && !page.More && everyPodBad(u.GetKind(), bad, len(page.Items)) {
+		st, w.everyPodBad = shape.Warning, true
+	}
 	if worst != nil {
 		w.worst, w.worstPod = worst.GetName(), worst
 		if st == shape.Healthy {

@@ -305,6 +305,16 @@ no ready endpoints (from EndpointSlices). Each finding is one short line with
 the evidence, for example `container api: CrashLoopBackOff, 14 restarts, last
 exit 137 (OOMKilled)`.
 
+A Deployment, StatefulSet, DaemonSet or ReplicaSet whose status counts every
+replica available is still a warning when every one of its pods has a
+problem (`every pod has a problem (2 of 2)`). A pod in a restart loop is Ready
+between two kills, so the controller counts it as available. One pod with a
+problem among healthy ones is not enough: describe says what it did on an
+`earlier:` line. `describe` judges the pods that it reads already. `list`
+reads the pods of the namespace once more for this rule, after the object
+list. When that read fails or is cut at the cap, each workload keeps the
+state of its own status.
+
 Kinds that have no rule of their own get the same signals from one general
 function (§7.7): the conditions of the object that are not healthy, and a few
 status fields. The row of a list uses the same function for its `CAUSE`.

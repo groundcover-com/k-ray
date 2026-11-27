@@ -182,6 +182,10 @@ func (r *Runner) describeWorkloadParts(ctx context.Context, d *describeParts) {
 	}
 	d.podSummary, d.podLines, d.firstBadPod = w.summary, w.lines, w.worst
 	d.badPod = w.worstPod
+	if w.everyPodBad && d.row.State == shape.Healthy {
+		d.row.AddProblem(shape.Warning, everyPodBadText(len(w.pods)))
+		d.state, d.problems = describeStateLine(d.row.State), d.row.Lines(r.rt)
+	}
 	if !d.brief && !w.unread {
 		if d.k.Kind() == "Deployment" {
 			d.revLines = r.revisionDiff(ctx, d.u, d.ns, w, d.red)
